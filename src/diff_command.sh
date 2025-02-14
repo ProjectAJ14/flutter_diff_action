@@ -16,7 +16,7 @@ fi
 
 # Validate optional parameters
 
-if [ "$USE_MELOS" != "true" ] && [ "$USE_MELOS" != "false" ]; then
+if [ "$USE_MELOS" != true ] && [ "$USE_MELOS" != false ]; then
   echo "Error: USE_MELOS must be 'true' or 'false'"
   exit 1
 fi
