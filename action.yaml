@@ -32,7 +32,7 @@ runs:
 
     - name: Configure script permissions
       shell: bash
-      run: chmod +x "$GITHUB_ACTION_PATH/diff_command.sh"
+      run: chmod +x "$GITHUB_ACTION_PATH/src/diff_command.sh"
 
     - name: Execute Flutter command with diff checking
       id: flutter-diff-action
