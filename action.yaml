@@ -1,0 +1,44 @@
+name: Flutter Diff Action
+description: |
+  Run Flutter commands with diff checking capabilities.
+  Supports both standard Flutter commands and Melos-based workflows.
+author: ProjectAJ14
+
+branding:
+  icon: maximize  # GitHub action icon
+  color: blue     # GitHub action color theme
+
+inputs:
+  command:
+    description: The Flutter command to execute (e.g., test, build, analyze)
+    required: false
+    default: flutter analyze
+    type: string
+  use-melos:
+    description: Whether to execute the command using Melos for mono-repo support
+    required: false
+    default: true
+    type: boolean
+
+runs:
+  using: composite
+  steps:
+    - name: Install yq on Windows runners
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        echo "Installing yq parser for Windows environment..."
+        choco install yq
+
+    - name: Configure script permissions
+      shell: bash
+      run: chmod +x "$GITHUB_ACTION_PATH/diff_command.sh"
+
+    - name: Execute Flutter command with diff checking
+      id: flutter-diff-action
+      shell: bash
+      run: |
+        $GITHUB_ACTION_PATH/src/diff_command.sh \
+          -p \
+          -n '${{ inputs.command }}' \
+          -f '${{ inputs.use-melos }}'

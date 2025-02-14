@@ -1,0 +1,33 @@
+name: test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    paths:
+      - src/diff_command.sh
+      - action.yaml
+      - .github/workflows/test.yaml
+jobs:
+  lint_shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - name: Run shellcheck
+        uses: ludeeus/action-shellcheck@master
+
+  test_action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - id: flutter-diff-action
+        uses: ./
+        with:
+          command: flutter test
+          use-melos: true
+
