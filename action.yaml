@@ -5,20 +5,24 @@ description: |
 author: ProjectAJ14
 
 branding:
-  icon: maximize  # GitHub action icon
-  color: blue     # GitHub action color theme
+  icon: maximize
+  color: blue
 
 inputs:
   command:
     description: The Flutter command to execute (e.g., test, build, analyze)
-    required: false
-    default: flutter analyze
+    required: true
     type: string
   use-melos:
     description: Whether to execute the command using Melos for mono-repo support
     required: false
-    default: true
-    type: boolean
+    default: 'false'
+    type: string
+  debug:
+    description: Enable debug output for troubleshooting
+    required: false
+    default: 'false'
+    type: string
 
 runs:
   using: composite
@@ -39,6 +43,6 @@ runs:
       shell: bash
       run: |
         $GITHUB_ACTION_PATH/src/diff_command.sh \
-          -p \
           -n '${{ inputs.command }}' \
-          -f '${{ inputs.use-melos }}'
+          -f '${{ inputs.use-melos }}' \
+          ${{ inputs.debug == 'true' && '-p' || '' }}
