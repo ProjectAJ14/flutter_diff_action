@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
+      - run: npm i
       - name: Get Release Token
         id: get_workflow_token
         uses: peter-murray/workflow-application-token-action@v3
