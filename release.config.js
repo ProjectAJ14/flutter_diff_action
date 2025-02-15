@@ -1,6 +1,6 @@
 const config = {
-    branches: [{
-        name: 'main', prerelease: 'alpha'
+    branches: ["main", {
+        name: "alpha", prerelease: "alpha"
     }],
     plugins: ['@semantic-release/commit-analyzer', '@semantic-release/release-notes-generator', ["@semantic-release/git", {
         "assets": ["dist/*.js", "dist/*.js.map"],
