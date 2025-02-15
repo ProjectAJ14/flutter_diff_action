@@ -2,7 +2,7 @@
   "branches": [
     {
       "name": "main",
-      "prerelease": "alpha"
+      "prerelease": true
     }
   ],
   "plugins": [
