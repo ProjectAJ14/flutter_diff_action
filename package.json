@@ -1,6 +1,6 @@
 {
   "name": "flutter_diff_action",
-  "version": "0.1.0-alpha",
+  "version": "1.0.0",
   "description": "Run Flutter commands with diff checking capabilities.",
   "main": "action.yaml",
   "directories": {
