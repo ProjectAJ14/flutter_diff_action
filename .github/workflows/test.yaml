@@ -7,10 +7,8 @@ on:
       - main
       - dev
   pull_request:
-    paths:
-      - src/diff_command.sh
-      - action.yaml
-      - .github/workflows/test.yaml
+    branches:
+      - main
 jobs:
   lint_shellcheck:
     runs-on: ubuntu-latest
