@@ -2,14 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-  push:
-      branches:
-      - main
-      - alpha
-  pull_request:
-    branches:
-      - main
-      - alpha
 
 jobs:
   release:
@@ -27,6 +19,6 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - run: npx semantic-release --dry-run --debug
+      - run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
