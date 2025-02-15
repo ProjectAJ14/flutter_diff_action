@@ -3,9 +3,8 @@ description: |
   Run Flutter commands with diff checking capabilities.
   Supports both standard Flutter commands and Melos-based workflows.
 author: ProjectAJ14
-
 branding:
-  icon: maximize
+  icon: zap
   color: blue
 
 inputs:
