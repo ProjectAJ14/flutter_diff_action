@@ -56,14 +56,14 @@ if [ "$USE_MELOS" != "true" ] && [ "$USE_MELOS" != "false" ]; then
 fi
 
 # Debug output if requested
-if [ "$DEBUG" = true ]; then
+if [ "$DEBUG" == true ]; then
     echo "Configuration:"
     echo "- Command: $COMMAND"
     echo "- Base Branch: $BASE_BRANCH"
     echo "- Use Melos: $USE_MELOS"
 fi
 
-chmod +x flutter_diff_runner.sh
+chmod +x src/flutter_diff_runner.sh
 
 # Execute command
 echo "Running command: $COMMAND"
@@ -75,12 +75,12 @@ if [ "$USE_MELOS" == "true" ]; then
         echo "Melos is already installed. Version: $(melos --version)"
     else
         echo "Melos not found. Installing Melos..."
-        dart pub global activate melos
+        eval "dart pub global activate melos"
     fi
     eval "melos exec --diff=$BASE_BRANCH -- $COMMAND"
 else
     # Add standard command execution here
-    eval "flutter_diff_runner.sh -n \"$COMMAND\" -b $BASE_BRANCH"
+    eval "src/flutter_diff_runner.sh -n \"$COMMAND\" -b $BASE_BRANCH"
 fi
 
 # Capture the exit code of command
