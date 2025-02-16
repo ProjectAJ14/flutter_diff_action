@@ -49,7 +49,7 @@ echo "Repository root: $REPO_ROOT"
 echo "Relative base path: $RELATIVE_BASE_PATH"
 
 # Fetch the list of modified Dart files relative to the git root
-MODIFIED_FILES=$(git diff --name-only $BASE_BRANCH...HEAD | grep '\.dart$')
+MODIFIED_FILES=$(git diff $BASE_BRANCH...HEAD --name-only | grep '\.dart$')
 
 if [ -z "$MODIFIED_FILES" ]; then
   echo "No Dart files were modified."
