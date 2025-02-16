@@ -50,7 +50,7 @@ fi
 
 # Validate USE_MELOS parameter
 USE_MELOS=$(echo "$USE_MELOS" | tr '[:upper:]' '[:lower:]')  # Convert to lowercase
-if [ "$USE_MELOS" == "true" ]; then
+if [ "$USE_MELOS" != "true" ] && [ "$USE_MELOS" != "false" ]; then
     echo "Error: Use Melos (-f) must be 'true' or 'false'"
     show_usage
 fi
