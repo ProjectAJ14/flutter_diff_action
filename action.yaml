@@ -11,17 +11,14 @@ inputs:
   command:
     description: The Flutter command to execute (e.g., test, build, analyze)
     required: true
-    type: string
   use-melos:
     description: Whether to execute the command using Melos for mono-repo support
     required: false
     default: 'false'
-    type: string
   debug:
     description: Enable debug output for troubleshooting
     required: false
     default: 'false'
-    type: string
 
 runs:
   using: composite
