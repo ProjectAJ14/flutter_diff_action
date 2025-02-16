@@ -50,7 +50,7 @@ fi
 
 # Validate USE_MELOS parameter
 USE_MELOS=$(echo "$USE_MELOS" | tr '[:upper:]' '[:lower:]')  # Convert to lowercase
-if [ "$USE_MELOS" != "true" ] && [ "$USE_MELOS" != "false" ]; then
+if [ "$USE_MELOS" == "true" ]; then
     echo "Error: Use Melos (-f) must be 'true' or 'false'"
     show_usage
 fi
@@ -63,45 +63,25 @@ if [ "$DEBUG" = true ]; then
     echo "- Use Melos: $USE_MELOS"
 fi
 
+chmod +x flutter_diff_runner.sh
+
 # Execute command
 echo "Running command: $COMMAND"
-if [ "$USE_MELOS" = "true" ]; then
+
+if [ "$USE_MELOS" == "true" ]; then
     echo "Using Melos for execution"
     # Add Melos-specific command execution here
-    if ! command -v melos &> /dev/null then
-        echo "Melos not found. Installing Melos..."
-        # dart pub global activate melos
-    else
+    if command -v melos &> /dev/null; then
         echo "Melos is already installed. Version: $(melos --version)"
+    else
+        echo "Melos not found. Installing Melos..."
+        dart pub global activate melos
     fi
+    eval "melos exec --diff=$BASE_BRANCH -- $COMMAND"
 else
     # Add standard command execution here
-    eval "$COMMAND"
+    eval "flutter_diff_runner.sh -n \"$COMMAND\" -b $BASE_BRANCH"
 fi
-
-# Get the current directory (subdirectory) path
-BASE_PATH=$(pwd)
-
-# Get the repository root path
-REPO_ROOT=$(git rev-parse --show-toplevel)
-
-# Calculate the relative path of the current directory to the repository root
-RELATIVE_BASE_PATH=${BASE_PATH#$REPO_ROOT/}
-
-echo "Current directory: $BASE_PATH"
-echo "Repository root: $REPO_ROOT"
-echo "Relative base path: $RELATIVE_BASE_PATH"
-
-# Fetch the list of modified Dart files relative to the git root
-MODIFIED_FILES=$(git diff --name-only $BASE_BRANCH...HEAD | grep '\.dart$')
-
-if [ -z "$MODIFIED_FILES" ]; then
-  echo "No Dart files were modified."
-  exit 0
-fi
-
-echo "Modified Dart files:"
-echo "$MODIFIED_FILES"
 
 # Capture the exit code of command
 EXIT_CODE=$?
