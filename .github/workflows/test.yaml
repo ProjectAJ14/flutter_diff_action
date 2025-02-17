@@ -23,10 +23,19 @@ jobs:
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
-      - id: flutter-diff-action
-        uses: ./
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          command: flutter test
-          use-melos: true
-          debug: true
-
+          flutter-version: 3.19.6
+          channel: stable
+          cache: true
+      - name: Set up dart-diff
+        run: dart pub global activate -sgit https://github.com/Droyder7/dart-diff
+      - name: Change Directory
+        run: cd example
+      - name: Dart Format
+        run: dart-diff format
+      - name: Dart Analyze
+        run: dart-diff analyze
+      - name: Run Flutter test
+        run: dart-diff test -f
