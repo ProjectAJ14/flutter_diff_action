@@ -19,10 +19,6 @@ inputs:
     description: Enable debug output for troubleshooting
     required: false
     default: 'false'
-  base-branch:
-    description: Base branch to compare changes against (defaults to target branch in PR or default branch)
-    required: false
-    default: ''
 
 runs:
   using: composite
@@ -48,4 +44,4 @@ runs:
           -f '${{ inputs.use-melos }}' \
           ${{ inputs.debug == 'true' && '-p' || '' }}
       env:
-        BASE_BRANCH: ${{ github.base_ref }}
+        BASE_BRANCH: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'origin/main' }}
