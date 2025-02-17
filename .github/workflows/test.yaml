@@ -1,4 +1,4 @@
-name: Test Flutter Diff Action
+name: test
 
 on:
   workflow_dispatch:
@@ -10,50 +10,54 @@ on:
     branches:
       - main
 
-env:
-  SIMPLE_APP_DIR: 'example/simple_app'
-  SUPER_APP_DIR: 'example/super_app'
-
 jobs:
+  lint_shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - name: Run shellcheck
+        uses: ludeeus/action-shellcheck@master
+
   test_action:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - working-directory: ${{ env.SIMPLE_APP_DIR }}
+          - working-directory: 'example/simple_app'
             melos: false
             command: 'flutter test --no-pub --coverage'
-          - working-directory: ${{ env.SIMPLE_APP_DIR }}
+          - working-directory: 'example/simple_app'
             melos: false
             command: 'flutter test'
-          - working-directory: ${{ env.SIMPLE_APP_DIR }}
+          - working-directory: 'example/simple_app'
             melos: false
             command: 'flutter analyze --fatal-infos'
-          - working-directory: ${{ env.SIMPLE_APP_DIR }}
+          - working-directory: 'example/simple_app'
             melos: false
             command: 'flutter analyze'
-          - working-directory: ${{ env.SIMPLE_APP_DIR }}
+          - working-directory: 'example/simple_app'
             melos: false
             command: 'dart format --set-exit-if-changed'
-          - working-directory: ${{ env.SIMPLE_APP_DIR }}
+          - working-directory: 'example/simple_app'
             melos: false
             command: 'dart format'
-          - working-directory: ${{ env.SUPER_APP_DIR }}
+          - working-directory: 'example/super_app'
             melos: true
             command: 'flutter test --no-pub --coverage'
-          - working-directory: ${{ env.SUPER_APP_DIR }}
+          - working-directory: 'example/super_app'
             melos: true
             command: 'flutter test'
-          - working-directory: ${{ env.SUPER_APP_DIR }}
+          - working-directory: 'example/super_app'
             melos: true
             command: 'flutter analyze --fatal-infos'
-          - working-directory: ${{ env.SUPER_APP_DIR }}
+          - working-directory: 'example/super_app'
             melos: true
             command: 'flutter analyze'
-          - working-directory: ${{ env.SUPER_APP_DIR }}
+          - working-directory: 'example/super_app'
             melos: true
             command: 'dart format --set-exit-if-changed'
-          - working-directory: ${{ env.SUPER_APP_DIR }}
+          - working-directory: 'example/super_app'
             melos: true
             command: 'dart format'
     name: |
