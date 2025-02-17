@@ -9,7 +9,7 @@ branding:
 
 inputs:
   command:
-    description: The Flutter command to execute (e.g., test, build, analyze)
+    description: The Flutter command to execute (e.g., flutter test, dart format)
     required: true
   use-melos:
     description: Whether to execute the command using Melos for mono-repo support
@@ -19,6 +19,10 @@ inputs:
     description: Enable debug output for troubleshooting
     required: false
     default: 'false'
+  base-branch:
+    description: Base branch to compare changes against (defaults to target branch in PR or default branch)
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -32,13 +36,16 @@ runs:
 
     - name: Configure script permissions
       shell: bash
-      run: chmod +x "$GITHUB_ACTION_PATH/src/diff_command.sh"
+      run: chmod +x "$GITHUB_ACTION_PATH/src/script.sh"
 
     - name: Execute Flutter command with diff checking
       id: flutter-diff-action
       shell: bash
       run: |
-        $GITHUB_ACTION_PATH/src/diff_command.sh \
+        # Execute script with determined base branch
+        $GITHUB_ACTION_PATH/src/script.sh \
           -n '${{ inputs.command }}' \
           -f '${{ inputs.use-melos }}' \
           ${{ inputs.debug == 'true' && '-p' || '' }}
+      env:
+        BASE_BRANCH: ${{ github.base_ref }}

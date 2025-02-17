@@ -9,24 +9,122 @@ on:
   pull_request:
     branches:
       - main
+
 jobs:
   lint_shellcheck:
     runs-on: ubuntu-latest
+    name: ShellCheck
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
       - name: Run shellcheck
         uses: ludeeus/action-shellcheck@master
 
-  test_action:
+  test_simple_app:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        command:
+          - 'flutter test --no-pub --coverage'
+          - 'flutter test'
+          - 'flutter analyze --fatal-infos'
+          - 'flutter analyze'
+          - 'dart format --set-exit-if-changed'
+          - 'dart format'
+    name: Simple App - ${{ matrix.command }}
+    defaults:
+      run:
+        working-directory: 'example/simple_app'
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
-      - id: flutter-diff-action
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            git fetch origin ${{ github.base_ref }}
+          else
+            git fetch origin main
+          fi
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: Run Flutter Diff Action
         uses: ./
         with:
-          command: flutter test
+          command: ${{ matrix.command }}
+          use-melos: false
+          debug: true
+          base-branch: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'origin/main' }}
+
+  test_super_app:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        command:
+          - 'flutter test --no-pub --coverage'
+          - 'flutter test'
+          - 'flutter analyze --fatal-infos'
+          - 'flutter analyze'
+          - 'dart format --set-exit-if-changed'
+          - 'dart format'
+    name: Super App - ${{ matrix.command }}
+    defaults:
+      run:
+        working-directory: 'example/super_app'
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            git fetch origin ${{ github.base_ref }}
+          else
+            git fetch origin main
+          fi
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Run Flutter Diff Action
+        uses: ./
+        with:
+          command: ${{ matrix.command }}
           use-melos: true
           debug: true
+          base-branch: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'origin/main' }}
 
+  verify_tests:
+    name: Verify All Tests
+    needs: [lint_shellcheck, test_simple_app, test_super_app]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check status
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+
+  test_action:
+    name: test_action
+    needs: verify_tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Success
+        run: echo "All tests passed"
