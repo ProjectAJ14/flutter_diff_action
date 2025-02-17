@@ -11,7 +11,7 @@ readonly NC='\033[0m' # No Color
 COMMAND=""
 USE_MELOS="false"
 DEBUG="false"
-BASE_BRANCH="${BASE_BRANCH:-origin/staging}"
+BASE_BRANCH="${BASE_BRANCH:-origin/main}"
 
 # Logging functions
 log_info() {
