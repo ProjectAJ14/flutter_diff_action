@@ -11,7 +11,7 @@ readonly NC='\033[0m' # No Color
 COMMAND=""
 USE_MELOS="false"
 DEBUG="false"
-BASE_BRANCH="${BASE_BRANCH:-origin/main}"
+BASE_BRANCH="${BASE_BRANCH:-main}"
 
 # Logging functions
 log_info() {
@@ -54,9 +54,10 @@ validate_parameters() {
 # Main script execution
 main() {
     # Parse command line arguments
-    while getopts "n:f:p" opt; do
+    while getopts "n:b:f:p" opt; do
         case $opt in
             n) COMMAND="$OPTARG"      ;;
+            b) BASE_BRANCH="$OPTARG"  ;;
             f) USE_MELOS="$OPTARG"    ;;
             p) DEBUG="true"           ;;
             *) usage                  ;;
@@ -73,6 +74,26 @@ main() {
 
     WORKSPACE_ROOT=$(pwd)
     log_debug "Workspace root: $WORKSPACE_ROOT"
+
+    eval "dart pub global activate -sgit https://github.com/Droyder7/dart_diff"
+
+    DART_DIFF_COMMAND="dart_diff exec -b $BASE_BRANCH -- \"$COMMAND\""
+
+    if [ "$USE_MELOS" == "true" ]; then
+        echo "Using Melos for execution"
+        # Add Melos-specific command execution here
+        if command -v melos &> /dev/null; then
+            echo "Melos is already installed. Version: $(melos --version)"
+        else
+            echo "Melos not found. Installing Melos..."
+            eval "dart pub global activate melos"
+        fi
+        eval "melos exec --diff=$BASE_BRANCH -- $DART_DIFF_COMMAND"
+    else
+        # Add standard command execution here
+        eval "$DART_DIFF_COMMAND"
+    fi
+
     log_info "Script execution completed"
 }
 
