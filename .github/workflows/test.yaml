@@ -34,8 +34,8 @@ jobs:
       - name: Change Directory
         run: cd example
       - name: Dart Format
-        run: dart-diff format
+        run: dart_diff format
       - name: Dart Analyze
-        run: dart-diff analyze
+        run: dart_diff analyze
       - name: Run Flutter test
-        run: dart-diff test -f
+        run: dart_diff test -f
