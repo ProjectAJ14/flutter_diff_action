@@ -13,58 +13,29 @@ on:
 jobs:
   lint_shellcheck:
     runs-on: ubuntu-latest
+    name: ShellCheck
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
       - name: Run shellcheck
         uses: ludeeus/action-shellcheck@master
 
-  test_action:
+  test_simple_app:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        include:
-          - working-directory: 'example/simple_app'
-            melos: false
-            command: 'flutter test --no-pub --coverage'
-          - working-directory: 'example/simple_app'
-            melos: false
-            command: 'flutter test'
-          - working-directory: 'example/simple_app'
-            melos: false
-            command: 'flutter analyze --fatal-infos'
-          - working-directory: 'example/simple_app'
-            melos: false
-            command: 'flutter analyze'
-          - working-directory: 'example/simple_app'
-            melos: false
-            command: 'dart format --set-exit-if-changed'
-          - working-directory: 'example/simple_app'
-            melos: false
-            command: 'dart format'
-          - working-directory: 'example/super_app'
-            melos: true
-            command: 'flutter test --no-pub --coverage'
-          - working-directory: 'example/super_app'
-            melos: true
-            command: 'flutter test'
-          - working-directory: 'example/super_app'
-            melos: true
-            command: 'flutter analyze --fatal-infos'
-          - working-directory: 'example/super_app'
-            melos: true
-            command: 'flutter analyze'
-          - working-directory: 'example/super_app'
-            melos: true
-            command: 'dart format --set-exit-if-changed'
-          - working-directory: 'example/super_app'
-            melos: true
-            command: 'dart format'
-    name: |
-      Test ${{ matrix.command }} (Melos: ${{ matrix.melos }})
+        command:
+          - 'flutter test --no-pub --coverage'
+          - 'flutter test'
+          - 'flutter analyze --fatal-infos'
+          - 'flutter analyze'
+          - 'dart format --set-exit-if-changed'
+          - 'dart format'
+    name: Simple App - ${{ matrix.command }}
     defaults:
       run:
-        working-directory: ${{ matrix.working-directory }}
+        working-directory: 'example/simple_app'
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
@@ -76,15 +47,60 @@ jobs:
         with:
           flutter-version: '3.19.0'
           channel: 'stable'
-          cache: true
+
+      - name: Run Flutter Diff Action
+        uses: ./
+        with:
+          command: ${{ matrix.command }}
+          use-melos: false
+          debug: true
+          base-branch: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'origin/main' }}
+
+  test_super_app:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        command:
+          - 'flutter test --no-pub --coverage'
+          - 'flutter test'
+          - 'flutter analyze --fatal-infos'
+          - 'flutter analyze'
+          - 'dart format --set-exit-if-changed'
+          - 'dart format'
+    name: Super App - ${{ matrix.command }}
+    defaults:
+      run:
+        working-directory: 'example/super_app'
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
 
       - name: Install Melos
-        if: matrix.melos == true
         run: dart pub global activate melos
 
       - name: Run Flutter Diff Action
         uses: ./
         with:
           command: ${{ matrix.command }}
-          use-melos: ${{ matrix.melos }}
+          use-melos: true
           debug: true
+          base-branch: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'origin/main' }}
+
+  test_action:
+    name: Verify All Tests
+    needs: [lint_shellcheck, test_simple_app, test_super_app]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check status
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
