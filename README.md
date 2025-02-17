@@ -64,7 +64,6 @@ steps:
 | `command`     | Flutter/Dart command to execute (test, analyze, format) | Yes      | -       |
 | `use-melos`   | Whether to use Melos for mono-repo support              | No       | `false` |
 | `debug`       | Enable debug output for troubleshooting                 | No       | `false` |
-| `base-branch` | Base branch to compare changes against                  | No       | `main`  |
 
 ## Supported Commands
 
