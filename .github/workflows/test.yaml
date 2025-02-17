@@ -1,4 +1,4 @@
-name: test
+name: Test Flutter Diff Action
 
 on:
   workflow_dispatch:
@@ -9,6 +9,11 @@ on:
   pull_request:
     branches:
       - main
+
+env:
+  SIMPLE_APP_DIR: 'example/simple_app'
+  SUPER_APP_DIR: 'example/super_app'
+
 jobs:
   lint_shellcheck:
     runs-on: ubuntu-latest
@@ -20,13 +25,69 @@ jobs:
 
   test_action:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - working-directory: ${{ env.SIMPLE_APP_DIR }}
+            melos: false
+            command: 'flutter test --no-pub --coverage'
+          - working-directory: ${{ env.SIMPLE_APP_DIR }}
+            melos: false
+            command: 'flutter test'
+          - working-directory: ${{ env.SIMPLE_APP_DIR }}
+            melos: false
+            command: 'flutter analyze --fatal-infos'
+          - working-directory: ${{ env.SIMPLE_APP_DIR }}
+            melos: false
+            command: 'flutter analyze'
+          - working-directory: ${{ env.SIMPLE_APP_DIR }}
+            melos: false
+            command: 'dart format --set-exit-if-changed'
+          - working-directory: ${{ env.SIMPLE_APP_DIR }}
+            melos: false
+            command: 'dart format'
+          - working-directory: ${{ env.SUPER_APP_DIR }}
+            melos: true
+            command: 'flutter test --no-pub --coverage'
+          - working-directory: ${{ env.SUPER_APP_DIR }}
+            melos: true
+            command: 'flutter test'
+          - working-directory: ${{ env.SUPER_APP_DIR }}
+            melos: true
+            command: 'flutter analyze --fatal-infos'
+          - working-directory: ${{ env.SUPER_APP_DIR }}
+            melos: true
+            command: 'flutter analyze'
+          - working-directory: ${{ env.SUPER_APP_DIR }}
+            melos: true
+            command: 'dart format --set-exit-if-changed'
+          - working-directory: ${{ env.SUPER_APP_DIR }}
+            melos: true
+            command: 'dart format'
+    name: |
+      Test ${{ matrix.command }} (Melos: ${{ matrix.melos }})
+    defaults:
+      run:
+        working-directory: ${{ matrix.working-directory }}
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
-      - id: flutter-diff-action
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: Install Melos
+        if: matrix.melos == true
+        run: dart pub global activate melos
+
+      - name: Run Flutter Diff Action
         uses: ./
         with:
-          command: flutter test
-          use-melos: true
+          command: ${{ matrix.command }}
+          use-melos: ${{ matrix.melos }}
           debug: true
-
