@@ -76,6 +76,7 @@ jobs:
         with:
           flutter-version: '3.19.0'
           channel: 'stable'
+          cache: true
 
       - name: Install Melos
         if: matrix.melos == true
