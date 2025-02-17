@@ -1,40 +1,42 @@
-name: Semantic Release
+name: 🎯 Semantic Release
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # 🔄 Manual workflow trigger
 
 jobs:
-  semantic-release:
-    name: Semantic Release
+  create_release:    # 📦 Create and publish release
+    name: 🚀 Generate Release
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
+      contents: write        # 📝 Repository content modification
+      issues: write         # 🎫 Issue management
+      pull-requests: write  # 🔀 Pull request management
+
     steps:
-      - name: Checkout
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          persist-credentials: false
+          fetch-depth: 0     # 📚 Full git history for versioning
+          persist-credentials: false  # 🔒 Security best practice
 
-      - name: Setup Node.js environment
+      - name: ⚙️ Setup Node.js Environment
         uses: actions/setup-node@v4.2.0
 
-      - name: Prepare prerelease semantic
+      - name: 🔧 Configure Prerelease
         if: github.ref != 'refs/heads/main'
         run: mv .releaserc.prerelease.yaml .releaserc.yaml
+        # 📋 Apply prerelease configuration for non-main branches
 
-      - name: Semantic Release
+      - name: 🏷️ Generate Semantic Release
         uses: cycjimmy/semantic-release-action@v4.1.1
-        id: semantic # Need an `id` for output variables
+        id: semantic   # 🔍 Reference for output steps
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 🔑 Authentication
 
-      - name: Do something when a new release published
+      - name: 📊 Display Release Information
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
-          echo ${{ steps.semantic.outputs.new_release_version }}
-          echo ${{ steps.semantic.outputs.new_release_major_version }}
-          echo ${{ steps.semantic.outputs.new_release_minor_version }}
-          echo ${{ steps.semantic.outputs.new_release_patch_version }}
+          echo "📌 Release Version: ${{ steps.semantic.outputs.new_release_version }}"
+          echo "⬆️ Major Version: ${{ steps.semantic.outputs.new_release_major_version }}"
+          echo "➕ Minor Version: ${{ steps.semantic.outputs.new_release_minor_version }}"
+          echo "🔨 Patch Version: ${{ steps.semantic.outputs.new_release_patch_version }}"
