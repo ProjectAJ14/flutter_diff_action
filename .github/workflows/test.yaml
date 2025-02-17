@@ -47,6 +47,7 @@ jobs:
         uses: ./
         with:
           command: ${{ matrix.command }}
+          working-dir: 'example/simple_app'
           use-melos: false
           debug: true
 
@@ -85,6 +86,7 @@ jobs:
         uses: ./
         with:
           command: ${{ matrix.command }}
+          working-dir: 'example/super_app'
           use-melos: true
           debug: true
 

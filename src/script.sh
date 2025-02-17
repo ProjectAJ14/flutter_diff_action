@@ -12,6 +12,7 @@ COMMAND=""
 USE_MELOS="false"
 DEBUG="false"
 BASE_BRANCH="${BASE_BRANCH:-main}"
+WORKING_DIR="."
 
 # Logging functions
 log_info() {
@@ -37,6 +38,8 @@ usage() {
     echo -e "${BLUE}Usage: ./script.sh -n <command> -f <use_melos> [-p debug]${NC}"
     echo "Parameters:"
     echo "  -n command   - Flutter/Dart command to execute"
+    echo "  -b base_branch      - Base branch to compare against"
+    echo "  -w working_dir      - Working directory"
     echo "  -f use_melos - Use Melos (true/false)"
     echo "  -p          - Enable debug mode"
     exit 1
@@ -54,10 +57,11 @@ validate_parameters() {
 # Main script execution
 main() {
     # Parse command line arguments
-    while getopts "n:b:f:p" opt; do
+    while getopts "n:b:w:f:p" opt; do
         case $opt in
             n) COMMAND="$OPTARG"      ;;
             b) BASE_BRANCH="$OPTARG"  ;;
+            w) WORKING_DIR="$OPTARG"  ;;
             f) USE_MELOS="$OPTARG"    ;;
             p) DEBUG="true"           ;;
             *) usage                  ;;
@@ -72,6 +76,7 @@ main() {
     # Validate parameters
     validate_parameters
 
+    eval "cd $WORKING_DIR"
     WORKSPACE_ROOT=$(pwd)
     log_debug "Workspace root: $WORKSPACE_ROOT"
 
@@ -95,6 +100,9 @@ main() {
     fi
 
     log_info "Script execution completed"
+
+    EXIT_CODE=$?
+    exit $EXIT_CODE
 }
 
 # Execute main function with all arguments
