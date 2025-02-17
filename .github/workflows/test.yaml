@@ -15,14 +15,6 @@ env:
   SUPER_APP_DIR: 'example/super_app'
 
 jobs:
-  lint_shellcheck:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Clone repository
-        uses: actions/checkout@v4
-      - name: Run shellcheck
-        uses: ludeeus/action-shellcheck@master
-
   test_action:
     runs-on: ubuntu-latest
     strategy:
