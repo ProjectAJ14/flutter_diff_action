@@ -1,13 +1,17 @@
-name: Lint Commit Messages
-on: [pull_request]
+name: 🔍 Commit Message Linter
+on: [ pull_request ]
 
 permissions:
-  contents: read
-  pull-requests: read
+  contents: read        # 📖 Required for repository access
+  pull-requests: read   # 👁️ Required for PR inspection
 
 jobs:
-  commit_lint:
+  lint_commit_messages: # 🕵️ Enforce commit message conventions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: wagoid/commitlint-github-action@v6
+      - name: 🛸 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🎯 Validate Commit Messages
+        uses: wagoid/commitlint-github-action@v6
+        # 📝 Ensures commit messages follow conventional commit standards
