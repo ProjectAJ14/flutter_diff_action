@@ -32,6 +32,13 @@ runs:
       run: dart pub global activate -sgit https://github.com/Droyder7/dart_diff
 
     - name: Run exec command
+      if: ${{ inputs.use-melos == 'false' }}
       shell: bash
       run: dart_diff exec -- '${{ inputs.command }}'
+      working-directory: ${{ inputs.working-dir }}
+
+    - name: Run melos command
+      if: ${{ inputs.use-melos == 'true' }}
+      shell: bash
+      run: melos exec -- "dart_diff exec -- '${{ inputs.command }}'"
       working-directory: ${{ inputs.working-dir }}
