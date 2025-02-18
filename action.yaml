@@ -15,6 +15,10 @@ inputs:
     description: Whether to execute the command using Melos for mono-repo support
     required: false
     default: 'false'
+  working-dir:
+    description: The working directory to run the command from
+    required: false
+    default: '.'
   debug:
     description: Enable debug output for troubleshooting
     required: false
@@ -23,25 +27,11 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Install yq on Windows runners
-      if: runner.os == 'Windows'
+    - name: Set up dart-diff
       shell: bash
-      run: |
-        echo "Installing yq parser for Windows environment..."
-        choco install yq
+      run: dart pub global activate -sgit https://github.com/Droyder7/dart_diff
 
-    - name: Configure script permissions
+    - name: Run exec command
       shell: bash
-      run: chmod +x "$GITHUB_ACTION_PATH/src/script.sh"
-
-    - name: Execute Flutter command with diff checking
-      id: flutter-diff-action
-      shell: bash
-      run: |
-        # Execute script with determined base branch
-        $GITHUB_ACTION_PATH/src/script.sh \
-          -n '${{ inputs.command }}' \
-          -f '${{ inputs.use-melos }}' \
-          ${{ inputs.debug == 'true' && '-p' || '' }}
-      env:
-        BASE_BRANCH: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'origin/main' }}
+      run: dart_diff exec -- '${{ inputs.command }}'
+      working-directory: ${{ inputs.working-dir }}
