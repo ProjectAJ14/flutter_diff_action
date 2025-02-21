@@ -29,9 +29,8 @@ runs:
   steps:
     - name: Set up dart-diff
       shell: bash
-      run: dart pub global activate --source path packages/dart_diff_cli
-      working-directory: ${{ github.workspace }}
       # TODO(Droyder7): Replace with the published package once it's published
+      run: dart pub global activate -sgit https://github.com/Droyder7/dart_diff
 
     - name: Run exec command
       if: ${{ inputs.use-melos == 'false' }}

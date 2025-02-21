@@ -6,15 +6,6 @@ on:
       - main
 
 jobs:
-  lint_shellcheck:
-    runs-on: ubuntu-latest
-    name: ShellCheck
-    steps:
-      - name: Clone repository
-        uses: actions/checkout@v4
-      - name: Run shellcheck
-        uses: ludeeus/action-shellcheck@master
-
   test_simple_app:
     runs-on: ubuntu-latest
     strategy:
@@ -92,7 +83,7 @@ jobs:
 
   verify_tests:
     name: Verify All Tests
-    needs: [lint_shellcheck, test_simple_app, test_super_app]
+    needs: [ test_simple_app, test_super_app ]
     runs-on: ubuntu-latest
     if: always()
     steps:

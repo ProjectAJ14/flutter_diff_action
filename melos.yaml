@@ -1,0 +1,18 @@
+name: dart_diff_workspace
+
+packages:
+  - packages/*
+
+command:
+  version:
+    workspaceChangelog: false
+    fetchTags: true
+    updateGitTagRefs: false
+    linkToCommits: false
+    hooks:
+      post: melos run update_cli_version
+
+scripts:
+  lint: dart format . --set-exit-if-changed && flutter analyze --fatal-infos .
+  update_cli_version:
+    run: dart run tools/update_cli_version.dart
