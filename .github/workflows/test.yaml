@@ -6,15 +6,6 @@ on:
       - main
 
 jobs:
-  lint_shellcheck:
-    runs-on: ubuntu-latest
-    name: ShellCheck
-    steps:
-      - name: Clone repository
-        uses: actions/checkout@v4
-      - name: Run shellcheck
-        uses: ludeeus/action-shellcheck@master
-
   test_simple_app:
     runs-on: ubuntu-latest
     strategy:
@@ -40,13 +31,14 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.19.6'
           channel: 'stable'
 
       - name: Run Flutter Diff Action
         uses: ./
         with:
           command: ${{ matrix.command }}
+          working-dir: 'example/simple_app'
           use-melos: false
           debug: true
 
@@ -75,7 +67,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.19.6'
           channel: 'stable'
 
       - name: Install Melos
@@ -85,12 +77,13 @@ jobs:
         uses: ./
         with:
           command: ${{ matrix.command }}
+          working-dir: 'example/super_app'
           use-melos: true
           debug: true
 
   verify_tests:
     name: Verify All Tests
-    needs: [lint_shellcheck, test_simple_app, test_super_app]
+    needs: [ test_simple_app, test_super_app ]
     runs-on: ubuntu-latest
     if: always()
     steps:

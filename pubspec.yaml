@@ -1,0 +1,13 @@
+name: flutter_diff_action
+description: |
+  Run Flutter/Dart commands with diff checking capabilities.
+  Supports both standard Flutter commands and Melos-based workflows.
+
+environment:
+  sdk: ">=3.3.3 <4.0.0"
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+  melos: ^6.2.0
+  pubspec_parse: ^1.3.0
+  mason_logger: ^0.3.1
