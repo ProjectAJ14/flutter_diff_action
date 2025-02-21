@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:pubspec_parse/pubspec_parse.dart';
 
-const _cliDirectory = 'packages/nonstop_cli';
+const _cliDirectory = 'packages/dart_diff_cli';
 
 void main() async {
   final logger = Logger();

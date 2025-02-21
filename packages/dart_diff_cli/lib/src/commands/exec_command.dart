@@ -35,6 +35,7 @@ class ExecCommand extends Command<int> {
 
   @override
   Future<int> run() async {
+    //TODO(droyder7) implement run
     _logger.info(
         'Why did the scarecrow win an award? Because he was outstanding in his field!');
     _logger.info('This is a joke, but the command is working');
