@@ -29,7 +29,7 @@ runs:
   steps:
     - name: Set up dart-diff
       shell: bash
-      run: dart pub global activate -sgit https://github.com/Droyder7/dart_diff
+      run: dart pub global activate -sgit https://github.com/Droyder7/dart_diff --source-branch refactor
 
     - name: Run exec command
       if: ${{ inputs.use-melos == 'false' }}
