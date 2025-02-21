@@ -52,7 +52,7 @@ package-lock.json
 **/node_modules/
 mason-lock.json
 .mason/
-
+pubspec.lock
 # Testing and logs
 coverage/
 *.log
