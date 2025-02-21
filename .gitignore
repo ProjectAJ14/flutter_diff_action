@@ -1,18 +1,69 @@
-.idea
-node_modules
-package-lock.json
-**/node_modules
-*.log
-build
-dist
-.DS_Store
-coverage
-.dart_tool
+# Dart/Flutter specific
+.dart_tool/
+build/
+.packages
+.pub/
+.pub-cache/
 pubspec_overrides.yaml
+**/doc/api/
+
+# Flutter specific
 .flutter-plugins
 .flutter-plugins-dependencies
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/ephemeral
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/flutter_assets/
+**/ios/Pods/
+**/android/.gradle
+**/android/captures/
+**/android/local.properties
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+
+# IDE specific
+.idea/
+.vscode/
 *.iml
-*.lock
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+
+# System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+
+# Package/dependency related
+.packages
+**/packages/**/pubspec.lock
+node_modules/
+package-lock.json
+**/node_modules/
 mason-lock.json
-.mason
+.mason/
+
+# Testing and logs
+coverage/
+*.log
+test/failures/
+.test_coverage.dart
+lcov.info
 devtools_options.yaml
+
+# Build outputs
+dist/
+*.class
+*.pyc
+*.swp
+.buildlog/
