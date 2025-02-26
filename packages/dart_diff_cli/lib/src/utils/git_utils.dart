@@ -17,7 +17,7 @@ String getRelativeBasePath([Logger? logger]) {
   final basePath = Directory.current.path.withUnixPath();
   final repoRoot = getGitRepoRoot();
   final relativeBasePath = basePath.withoutBasePath(repoRoot);
-  logger?.info('Running in current directory: $relativeBasePath \n'
+  logger?.info('Current directory: $relativeBasePath \n'
       'Repository root: $repoRoot \n'
       'Relative base path: $relativeBasePath \n');
   return relativeBasePath;

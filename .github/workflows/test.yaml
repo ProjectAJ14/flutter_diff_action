@@ -31,8 +31,12 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
+          flutter-version: '3.27.3'
           channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
 
       - name: Run Flutter Diff Action
         uses: ./
@@ -67,11 +71,15 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
+          flutter-version: '3.27.3'
           channel: 'stable'
+          cache: true
 
       - name: Install Melos
         run: dart pub global activate melos
+
+      - name: Run Melos
+        run: melos bs
 
       - name: Run Flutter Diff Action
         uses: ./
@@ -83,7 +91,7 @@ jobs:
 
   verify_tests:
     name: Verify All Tests
-    needs: [ test_simple_app, test_super_app ]
+    needs: [test_simple_app, test_super_app]
     runs-on: ubuntu-latest
     if: always()
     steps:
