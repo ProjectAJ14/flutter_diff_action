@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/ProjectAJ14/flutter_diff_action/compare/v1.0.0...v1.0.1) (2025-02-28)
+
+
+### Bug Fixes
+
+* update dart_diff_cli activation command in action.yaml ([ec49ab6](https://github.com/ProjectAJ14/flutter_diff_action/commit/ec49ab6c786e7d13262e3ad14c1836a6f678bbcf))
+
 # 1.0.0 (2025-02-28)
 
 
