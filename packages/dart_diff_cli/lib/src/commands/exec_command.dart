@@ -22,11 +22,6 @@ class ExecCommand extends Command<int> {
         abbr: Options.remote.abbr,
         defaultsTo: Options.remote.defaultVal,
         help: 'Specify the remote repository to use for git diff',
-      )
-      ..addFlag(
-        'flutter',
-        abbr: 'f',
-        help: 'Run flutter test instead of dart test',
       );
   }
 

@@ -1,139 +1,169 @@
-# flutter_diff_action
+<p align="center">
+  <h1 align="center">Flutter Diff Action</h1>
+  <p align="center">Run Flutter commands on changed files with intelligence</p>
+</p>
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/ProjectAJ14/flutter_diff_action)](https://github.com/ProjectAJ14/flutter_diff_action/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  <a href="https://github.com/ProjectAJ14/flutter_diff_action/releases"><img src="https://img.shields.io/github/v/release/ProjectAJ14/flutter_diff_action?style=for-the-badge&logo=github&color=blue" alt="GitHub Release"></a>
+  <a href="https://pub.dev/packages/dart_diff_cli"><img src="https://img.shields.io/pub/v/dart_diff_cli.svg?style=for-the-badge&logo=dart&color=blue" alt="Pub Version"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT"></a>
+</p>
 
-🎯 Run Flutter commands on changed files with style! ⭐
+This project optimizes Flutter/Dart development workflows by running commands only on changed files, significantly speeding up CI/CD pipelines and local development.
 
-Originally created by [Ajay Kumar] & [Dipangshu Roy]
+## Table of Contents
+
+- [Overview](#overview)
+- [Project Components](#project-components)
+- [Quick Start Guide](#quick-start-guide)
+- [GitHub Action](#github-action)
+- [CLI Tool](#cli-tool)
+- [How It Works](#how-it-works)
+- [Contributing](#contributing)
 
 ## Overview
 
-This project consists of two main components:
+Flutter Diff Action provides tools to make your development and CI workflows more efficient by focusing on what's changed:
 
-1. **GitHub Action**: A GitHub Action that runs Flutter commands only on changed files
-2. **Dart CLI Tool**: A standalone CLI tool for running commands on changed files locally
+- ⚡ **Faster workflows**: Run commands only on files that have changed
+- 🧪 **Smarter testing**: Automatically find and run corresponding test files
+- 📦 **Mono-repo friendly**: Full support for Melos-based workspaces
+- 🛠️ **Flexible**: Works with testing, analysis, and formatting commands
 
-Both components support standard Flutter projects and Melos-based mono-repos, with features like:
+## Project Components
 
-- Running tests for changed files and their corresponding test files
-- Handling format and analyze commands for changed files
-- Supporting Melos workspaces for mono-repo setups
-- Working with both Pull Requests and direct pushes
+This repository contains two complementary tools:
 
-## Quick Start
+1. **GitHub Action**: For CI/CD pipelines to efficiently run commands on changed files
+2. **Dart CLI Tool**: For local development to speed up testing and analysis workflows
 
-### Using as GitHub Action
+Both tools intelligently identify changes, run commands only on affected files, and support mono-repo setups.
 
-Add the action to your workflow:
+## Quick Start Guide
+
+### GitHub Action
 
 ```yaml
-- name: Run Flutter command
+- name: Test changed files
   uses: ProjectAJ14/flutter_diff_action@v1
   with:
     command: "flutter test"
     use-melos: false
 ```
 
-### Using the CLI Tool
+### CLI Tool
 
-Install the CLI tool:
+```bash
+# Install
+dart pub global activate dart_diff_cli
+
+# Run tests only on changed files
+dart_diff exec -- test
+```
+
+## GitHub Action
+
+The GitHub Action component lets you run Flutter commands only on changed files in your CI/CD workflows.
+
+### Setup
+
+```yaml
+steps:
+  - uses: actions/checkout@v4
+  - uses: subosito/flutter-action@v2
+    with:
+      flutter-version: '3.19.6'
+  
+  - name: Run on changed files
+    uses: ProjectAJ14/flutter_diff_action@v1
+    with:
+      command: 'flutter test'
+```
+
+### Configuration Options
+
+| Parameter | Description | Required | Default |
+|-----------|-------------|----------|---------|
+| `command` | Command to execute on changed files | Yes | - |
+| `use-melos` | Enable Melos support for mono-repos | No | `false` |
+| `debug` | Show verbose debug output | No | `false` |
+
+### Examples
+
+#### Basic Test Workflow
+
+```yaml
+- name: Test changed files
+  uses: ProjectAJ14/flutter_diff_action@v1
+  with:
+    command: 'flutter test'
+```
+
+#### With Analysis & Coverage
+
+```yaml
+- name: Analyze & test changed files
+  uses: ProjectAJ14/flutter_diff_action@v1
+  with:
+    command: 'flutter analyze && flutter test --coverage'
+    debug: true
+```
+
+#### For Mono-Repos
+
+```yaml
+- name: Setup Melos
+  run: dart pub global activate melos
+
+- name: Test changed packages
+  uses: ProjectAJ14/flutter_diff_action@v1
+  with:
+    command: 'flutter test'
+    use-melos: true
+```
+
+## CLI Tool
+
+For detailed information about using the CLI tool, see the [dart_diff_cli README](packages/dart_diff_cli/README.md).
+
+### Installation
 
 ```bash
 dart pub global activate dart_diff_cli
 ```
 
-Run a command on changed files:
+> If you haven't already, you might need to
+> [set up your path](https://dart.dev/tools/pub/cmd/pub-global#running-a-script-from-your-path).
+
+### Basic Usage
 
 ```bash
-dart_diff exec -- test
-```
-
-## Package Structure
-
-This repository is organized as follows:
-
-- **GitHub Action**: Root directory contains the action configuration
-- **CLI Tool**: Located in `packages/dart_diff_cli`
-
-## GitHub Action Usage
-
-### Basic Flutter Project
-
-```yaml
-steps:
-  - name: Clone repository
-    uses: actions/checkout@v4
-  - name: Set up Flutter
-    uses: subosito/flutter-action@v2
-    with:
-      flutter-version: 3.19.6
-
-  - name: Run Flutter command
-    uses: ProjectAJ14/flutter_diff_action@v1
-    with:
-      command: "flutter test"
-      use-melos: false
-```
-
-### Melos-based Mono-repo
-
-```yaml
-steps:
-  - name: Clone repository
-    uses: actions/checkout@v4
-  - name: Set up Flutter
-    uses: subosito/flutter-action@v2
-    with:
-      flutter-version: 3.19.6
-      
-  - name: Install Melos
-    run: dart pub global activate melos
-    
-  - name: Run Flutter command
-    uses: ProjectAJ14/flutter_diff_action@v1
-    with:
-      command: "flutter test"
-      use-melos: true
-```
-
-## Action Inputs
-
-| Input         | Description                                             | Required | Default |
-|---------------|---------------------------------------------------------|----------|---------|
-| `command`     | Flutter/Dart command to execute (test, analyze, format) | Yes      | -       |
-| `use-melos`   | Whether to use Melos for mono-repo support              | No       | `false` |
-| `debug`       | Enable debug output for troubleshooting                 | No       | `false` |
-
-## CLI Tool Usage
-
-For detailed information about using the CLI tool, see the [dart_diff_cli README](packages/dart_diff_cli/README.md).
-
-Basic usage:
-
-```bash
-# Run tests on changed files
+# Run tests
 dart_diff exec -- test
 
-# With verbose output
-dart_diff exec --verbose -- test
-
-# Compare against a different branch
-dart_diff exec -b develop -- test
+# Run analyzer
+dart_diff exec -- analyze
 
 # Format changed files
 dart_diff exec -- format
 ```
 
-## Supported Commands
+### Advanced Options
 
-Both the GitHub Action and CLI tool support various Flutter and Dart commands:
+```bash
+# Specify base branch for comparison
+dart_diff exec -b develop -- test
 
-- `flutter test` / `flutter test --no-pub --coverage`
-- `flutter analyze` / `flutter analyze --fatal-infos`
-- `dart format` / `dart format --set-exit-if-changed`
+# Enable verbose logging
+dart_diff exec --verbose -- test
 
-## Full Workflow Example
+# Run commands with additional options
+dart_diff exec -- analyze --fatal-infos
+```
+
+## Common Workflows
+
+### CI/CD Pipeline
 
 ```yaml
 name: Flutter CI
@@ -159,36 +189,47 @@ jobs:
           debug: true
 ```
 
+### Local Development
+
+```bash
+# Pre-commit checks
+dart_diff exec -- format --set-exit-if-changed
+dart_diff exec -- analyze
+dart_diff exec -- test
+
+# Focus on specific branch changes
+dart_diff exec -b feature/login -- test
+```
+
+## How It Works
+
+1. Determines changed files by comparing against the base branch
+2. Filters the list to relevant Dart/Flutter files
+3. For test commands, finds corresponding test files
+4. Executes the requested command only on the affected files
+5. Provides detailed output of results
+
 ## Contributing
 
-We welcome contributions in various forms:
+Contributions are welcome and appreciated! Here's how you can contribute:
 
-1. **Code Contributions**
-   - Fork the repository
-   - Create a feature branch
-   - Submit a pull request
+- **Report bugs**: Open an issue describing the bug and how to reproduce it
+- **Suggest features**: Open an issue describing your idea and its benefits
+- **Submit PRs**: Implement bug fixes or features (please open an issue first)
+- **Improve docs**: Fix typos, clarify explanations, add examples
 
-2. **Bug Reports and Feature Requests**
-   - Use the GitHub Issues section
-   - Provide detailed information for bug reports
-   - Explain use cases for feature requests
+Please see our [contributing guidelines](CONTRIBUTING.md) for more details.
 
-3. **Documentation Improvements**
-   - Help improve README, inline documentation, or examples
+## License
 
-A big thank you to all our contributors! 🙌
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+
+Special thanks to all contributors who have helped improve this project.
 
 <div align="center">
   <a href="https://github.com/ProjectAJ14/flutter_diff_action/graphs/contributors">
     <img src="https://contrib.rocks/image?repo=ProjectAJ14/flutter_diff_action" alt="contributors"/>
   </a>
 </div>
-
-## Related Documentation
-
-- [Changelog](CHANGELOG.md)
-- [License](LICENSE)
-- [CLI Tool Documentation](packages/dart_diff_cli/README.md)
-
-[Ajay Kumar]: https://github.com/ProjectAJ14
-[Dipangshu Roy]: https://github.com/droyder7
