@@ -1,3 +1,7 @@
+## 0.0.4
+
+ - **FEAT**: add SVG icon for Dart Diff CLI and update README with logo.
+
 ## 0.0.3+2
 
  - **DOCS**(dart_diff_cli): reorganize README for clarity and remove redundant installation section.

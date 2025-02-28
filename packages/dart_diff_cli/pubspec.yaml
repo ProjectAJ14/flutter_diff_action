@@ -1,6 +1,6 @@
 name: dart_diff_cli
 description: Optimizes Flutter/Dart development workflows by running commands only on changed files, significantly speeding up CI/CD pipelines and local development.
-version: 0.0.3+2
+version: 0.0.4
 homepage: https://github.com/ProjectAJ14/flutter_diff_action
 documentation: https://github.com/ProjectAJ14/flutter_diff_action/tree/main/packages/dart_diff_cli
 repository: https://github.com/ProjectAJ14/flutter_diff_action/tree/main/packages/dart_diff_cli
