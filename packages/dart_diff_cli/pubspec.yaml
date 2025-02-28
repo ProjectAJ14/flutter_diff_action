@@ -1,6 +1,6 @@
 name: dart_diff_cli
 description: Run Flutter/Dart commands with diff checking capabilities.
-version: 0.0.1
+version: 0.0.2
 
 environment:
   sdk: ">=3.3.3 <4.0.0"
