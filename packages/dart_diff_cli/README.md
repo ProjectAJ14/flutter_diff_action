@@ -85,30 +85,30 @@ dart_diff exec [options] -- [command] [command-args]
 dart_diff exec -- test
 
 # Run tests against a different branch
-dart_diff exec -b develop -- test
+dart_diff exec -b develop -- flutter test
 
 # Run tests with verbose output
-dart_diff exec --verbose -- test
+dart_diff exec --verbose -- flutter test
 ```
 
 **Run analyzer on changed files**
 
 ```bash
 # Run the analyzer on changed files
-dart_diff exec -- analyze
+dart_diff exec -- dart analyze
 
 # Run analyzer with specific options
-dart_diff exec -- analyze --fatal-infos
+dart_diff exec -- dart analyze --fatal-infos
 ```
 
 **Format changed files**
 
 ```bash
 # Format changed files
-dart_diff exec -- format
+dart_diff exec -- dart format
 
 # Format with specific options
-dart_diff exec -- format --set-exit-if-changed
+dart_diff exec -- dart format --set-exit-if-changed
 ```
 
 ### update
@@ -133,30 +133,30 @@ The command:
 git diff --name-only main
 
 # Run tests only on the modified files
-dart_diff exec -- test
+dart_diff exec -- flutter test
 
 # Run tests with coverage
-dart_diff exec -- test --coverage
+dart_diff exec -- flutter test --coverage
 ```
 
 ### Pre-commit checks
 
 ```bash
 # Format only changed files
-dart_diff exec -- format --set-exit-if-changed
+dart_diff exec -- dart format --set-exit-if-changed
 
 # Analyze only changed files
-dart_diff exec -- analyze
+dart_diff exec -- dart analyze
 
 # Run tests for changed files
-dart_diff exec -- test
+dart_diff exec -- flutter test
 ```
 
 ### CI/CD optimization
 
 ```bash
 # In your CI pipeline, compare against the target branch
-dart_diff exec -b main -- test --no-pub --coverage
+dart_diff exec -b main -- flutter test --no-pub --coverage
 ```
 
 ## Troubleshooting
@@ -201,19 +201,28 @@ If your command fails to execute:
 
 ## Contributing
 
-Contributions are welcome! Please feel free to:
+Contributions are welcome and appreciated! Here's how you can contribute:
 
-- Report bugs and issues
-- Suggest new features or improvements
-- Submit pull requests with bug fixes or features
+- **Report bugs**: Open an issue describing the bug and how to reproduce it
+- **Suggest features**: Open an issue describing your idea and its benefits
+- **Submit PRs**: Implement bug fixes or features (please open an issue first)
+- **Improve docs**: Fix typos, clarify explanations, add examples
 
-See the [contributing guidelines](https://github.com/ProjectAJ14/flutter_diff_action/blob/main/CONTRIBUTING.md) for more details.
+## License
 
----
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-<br></br>
+## Acknowledgements
+
+Originally created by [Ajay Kumar] & [Dipangshu Roy].
+
+Special thanks to all contributors who have helped improve this project.
+
 <div align="center">
   <a href="https://github.com/ProjectAJ14/flutter_diff_action/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=ProjectAJ14/flutter_diff_action"  alt="contributors"/>
+    <img src="https://contrib.rocks/image?repo=ProjectAJ14/flutter_diff_action" alt="contributors"/>
   </a>
 </div>
+
+[Ajay Kumar]: https://github.com/ProjectAJ14
+[Dipangshu Roy]: https://github.com/droyder7

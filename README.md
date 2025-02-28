@@ -1,6 +1,6 @@
 <p align="center">
   <h1 align="center">Flutter Diff Action</h1>
-  <p align="center">Run Flutter commands on changed files with intelligence</p>
+  <p align="center">Run Flutter/Dart commands on changed files with intelligence</p>
 </p>
 
 <p align="center">
@@ -14,9 +14,7 @@ This project optimizes Flutter/Dart development workflows by running commands on
 
 - [Overview](#overview)
 - [Project Components](#project-components)
-- [Quick Start Guide](#quick-start-guide)
 - [GitHub Action](#github-action)
-- [CLI Tool](#cli-tool)
 - [How It Works](#how-it-works)
 - [Contributing](#contributing)
 
@@ -48,8 +46,6 @@ The GitHub Action component lets you run Flutter commands only on changed files 
 steps:
   - uses: actions/checkout@v4
   - uses: subosito/flutter-action@v2
-    with:
-      flutter-version: '3.19.6'
   
   - name: Run on changed files
     uses: ProjectAJ14/flutter_diff_action@v1
@@ -175,6 +171,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgements
 
+Originally created by [Ajay Kumar] & [Dipangshu Roy].
+
 Special thanks to all contributors who have helped improve this project.
 
 <div align="center">
@@ -182,3 +180,6 @@ Special thanks to all contributors who have helped improve this project.
     <img src="https://contrib.rocks/image?repo=ProjectAJ14/flutter_diff_action" alt="contributors"/>
   </a>
 </div>
+
+[Ajay Kumar]: https://github.com/ProjectAJ14
+[Dipangshu Roy]: https://github.com/droyder7
