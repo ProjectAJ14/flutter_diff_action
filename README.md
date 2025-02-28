@@ -5,7 +5,6 @@
 
 <p align="center">
   <a href="https://github.com/ProjectAJ14/flutter_diff_action/releases"><img src="https://img.shields.io/github/v/release/ProjectAJ14/flutter_diff_action?style=for-the-badge&logo=github&color=blue" alt="GitHub Release"></a>
-  <a href="https://pub.dev/packages/dart_diff_cli"><img src="https://img.shields.io/pub/v/dart_diff_cli.svg?style=for-the-badge&logo=dart&color=blue" alt="Pub Version"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT"></a>
 </p>
 
@@ -39,28 +38,6 @@ This repository contains two complementary tools:
 
 Both tools intelligently identify changes, run commands only on affected files, and support mono-repo setups.
 
-## Quick Start Guide
-
-### GitHub Action
-
-```yaml
-- name: Test changed files
-  uses: ProjectAJ14/flutter_diff_action@v1
-  with:
-    command: "flutter test"
-    use-melos: false
-```
-
-### CLI Tool
-
-```bash
-# Install
-dart pub global activate dart_diff_cli
-
-# Run tests only on changed files
-dart_diff exec -- test
-```
-
 ## GitHub Action
 
 The GitHub Action component lets you run Flutter commands only on changed files in your CI/CD workflows.
@@ -78,15 +55,19 @@ steps:
     uses: ProjectAJ14/flutter_diff_action@v1
     with:
       command: 'flutter test'
+      branch: ${{ github.base_ref }}
 ```
 
 ### Configuration Options
 
-| Parameter | Description | Required | Default |
-|-----------|-------------|----------|---------|
-| `command` | Command to execute on changed files | Yes | - |
-| `use-melos` | Enable Melos support for mono-repos | No | `false` |
-| `debug` | Show verbose debug output | No | `false` |
+| Parameter     | Description                         | Required | Default   |
+|---------------|-------------------------------------|----------|-----------|
+| `command`     | Command to execute on changed files | Yes      | -         |
+| `use-melos`   | Enable Melos support for mono-repos | No       | `false`   |
+| `working-dir` | Working directory for the command   | No       | `.`       |
+| `branch`      | Base branch for comparison          | No       | `main`    |
+| `remote`      | Remote repository name              | No       | `origin`  |
+| `debug`       | Show verbose debug output           | No       | `false`   |
 
 ### Examples
 
@@ -99,13 +80,13 @@ steps:
     command: 'flutter test'
 ```
 
-#### With Analysis & Coverage
+#### With Analysis
 
 ```yaml
 - name: Analyze & test changed files
   uses: ProjectAJ14/flutter_diff_action@v1
   with:
-    command: 'flutter analyze && flutter test --coverage'
+    command: 'flutter analyze'
     debug: true
 ```
 
@@ -122,43 +103,24 @@ steps:
     use-melos: true
 ```
 
-## CLI Tool
+#### With Custom Base Branch
 
-For detailed information about using the CLI tool, see the [dart_diff_cli README](packages/dart_diff_cli/README.md).
-
-### Installation
-
-```bash
-dart pub global activate dart_diff_cli
+```yaml
+- name: Test changed files
+  uses: ProjectAJ14/flutter_diff_action@v1
+  with:
+    command: 'flutter test'
+    branch: 'develop'
 ```
 
-> If you haven't already, you might need to
-> [set up your path](https://dart.dev/tools/pub/cmd/pub-global#running-a-script-from-your-path).
+#### With Custom Remote
 
-### Basic Usage
-
-```bash
-# Run tests
-dart_diff exec -- test
-
-# Run analyzer
-dart_diff exec -- analyze
-
-# Format changed files
-dart_diff exec -- format
-```
-
-### Advanced Options
-
-```bash
-# Specify base branch for comparison
-dart_diff exec -b develop -- test
-
-# Enable verbose logging
-dart_diff exec --verbose -- test
-
-# Run commands with additional options
-dart_diff exec -- analyze --fatal-infos
+```yaml
+- name: Test changed files
+  uses: ProjectAJ14/flutter_diff_action@v1
+  with:
+    command: 'flutter test'
+    remote: 'upstream'
 ```
 
 ## Common Workflows
@@ -185,20 +147,9 @@ jobs:
         uses: ProjectAJ14/flutter_diff_action@v1
         with:
           command: 'flutter test --no-pub --coverage'
+          branch: ${{ github.base_ref }}
           use-melos: true
           debug: true
-```
-
-### Local Development
-
-```bash
-# Pre-commit checks
-dart_diff exec -- format --set-exit-if-changed
-dart_diff exec -- analyze
-dart_diff exec -- test
-
-# Focus on specific branch changes
-dart_diff exec -b feature/login -- test
 ```
 
 ## How It Works
@@ -217,8 +168,6 @@ Contributions are welcome and appreciated! Here's how you can contribute:
 - **Suggest features**: Open an issue describing your idea and its benefits
 - **Submit PRs**: Implement bug fixes or features (please open an issue first)
 - **Improve docs**: Fix typos, clarify explanations, add examples
-
-Please see our [contributing guidelines](CONTRIBUTING.md) for more details.
 
 ## License
 

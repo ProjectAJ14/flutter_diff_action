@@ -41,6 +41,7 @@ jobs:
       - name: Run Flutter Diff Action
         uses: ./
         with:
+          branch: ${{ github.base_ref }}
           command: ${{ matrix.command }}
           working-dir: 'example/simple_app'
           use-melos: false
@@ -84,6 +85,7 @@ jobs:
       - name: Run Flutter Diff Action
         uses: ./
         with:
+          branch: ${{ github.base_ref }}
           command: ${{ matrix.command }}
           working-dir: 'example/super_app'
           use-melos: true
