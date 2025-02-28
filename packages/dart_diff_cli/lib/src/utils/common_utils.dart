@@ -5,18 +5,13 @@ import 'package:mason_logger/mason_logger.dart';
 /// Executes a command and returns its output.
 ///
 /// [command] is the command to run as a list of strings.
-/// [output] determines whether to output command execution to console.
-/// [logger] optional logger for output instead of print statements.
 ///
 /// Returns the command's stdout as a string.
 String runCommand(
   List<String> command, {
-  bool output = true,
-  Logger? logger,
+  required Logger logger,
 }) {
-  if (output) {
-    logger?.info('Running: ${command.join(' ')}');
-  }
+  logger.info('Running: ${command.join(' ')}');
 
   final result = Process.runSync(
     command.first,
@@ -26,19 +21,12 @@ String runCommand(
 
   if (result.exitCode != 0) {
     final errorMsg = 'Error running ${command.first} ${result.stderr}';
-    logger?.err(errorMsg);
+    logger.err(errorMsg);
     exit(1);
   }
 
   final stdoutStr = result.stdout.toString();
-  if (output && stdoutStr.isNotEmpty) {
-    if (logger != null) {
-      logger.info(stdoutStr);
-    } else {
-      stdout.write(stdoutStr);
-    }
-  }
-
+  logger.detail(stdoutStr);
   return stdoutStr;
 }
 

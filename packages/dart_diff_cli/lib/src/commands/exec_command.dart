@@ -5,6 +5,7 @@ import 'package:dart_diff_cli/src/utils/index.dart';
 import 'package:mason_logger/mason_logger.dart';
 
 /// Command to execute Flutter/Dart commands on changed files.
+///
 class ExecCommand extends Command<int> {
   /// Creates a new instance of [ExecCommand].
   ExecCommand({
@@ -38,7 +39,7 @@ class ExecCommand extends Command<int> {
     if (!isFlutterProjectRoot()) {
       _logger.err(
         'Error: No pubspec.yaml file found. '
-        'This command should be run from the root of your Flutter project.',
+        'This command should be run from the root of your Dart/Flutter project.',
       );
       return 1;
     }
@@ -65,7 +66,7 @@ class ExecCommand extends Command<int> {
     final bool isTest = extraArgs.any((e) => e == 'test');
     _logger.info('Running: ${extraArgs.join(' ')}');
 
-    final relativeBasePath = getRelativeBasePath(_logger);
+    final relativeBasePath = getRelativeBasePath(logger: _logger);
 
     final modifiedFiles = getModifiedFiles(remote, branch, logger: _logger)
         .where(
@@ -78,7 +79,7 @@ class ExecCommand extends Command<int> {
       return 0;
     }
 
-    _logger.info('Modified Dart files:');
+    _logger.info('Modified Dart files[${modifiedFiles.length}]:');
     for (final file in modifiedFiles) {
       _logger.info('  - $file');
     }
@@ -104,7 +105,7 @@ class ExecCommand extends Command<int> {
             testFiles.add(testFile);
             _logger.detail('Added test file: $testFile for $relativePath');
           } else {
-            _logger.warn('No test file found for $relativePath. Skipping...');
+            _logger.detail('No test file found for $relativePath. Skipping...');
           }
         }
       } else {
