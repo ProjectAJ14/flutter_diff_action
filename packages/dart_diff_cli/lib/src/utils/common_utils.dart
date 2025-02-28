@@ -1,28 +1,47 @@
 import 'dart:io';
 
-String runCommand(List<String> command, {bool output = true}) {
-  if (output) {
-    print('Running: ${command.join(' ')}');
-  }
+import 'package:mason_logger/mason_logger.dart';
+
+/// Executes a command and returns its output.
+///
+/// [command] is the command to run as a list of strings.
+///
+/// Returns the command's stdout as a string.
+String runCommand(
+  List<String> command, {
+  required Logger logger,
+}) {
+  logger.info('Running: ${command.join(' ')}');
+
   final result = Process.runSync(
     command.first,
     command.sublist(1),
     workingDirectory: Directory.current.path,
   );
+
   if (result.exitCode != 0) {
-    print('Error running ${command.sublist(0, 2).join(' ')} ${result.stderr}');
+    final errorMsg = 'Error running ${command.first} ${result.stderr}';
+    logger.err(errorMsg);
     exit(1);
   }
-  if (output) {
-    stdout.write(result.stdout);
-  }
-  return result.stdout.toString();
+
+  final stdoutStr = result.stdout.toString();
+  logger.detail(stdoutStr);
+  return stdoutStr;
 }
 
+/// Checks if the current directory is a Flutter/Dart project root.
+///
+/// Returns true if pubspec.yaml exists in the current directory.
 bool isFlutterProjectRoot() {
   return File('pubspec.yaml').existsSync();
 }
 
+/// Calculates the path to the test file corresponding to a given source file.
+///
+/// [filePath] is the path to the source file.
+///
+/// Returns the path to the corresponding test file.
 String calculateTestFile(String filePath) {
   if (filePath.startsWith('lib/')) {
     return filePath
@@ -32,15 +51,20 @@ String calculateTestFile(String filePath) {
   return filePath.replaceAll('.dart', '_test.dart');
 }
 
+/// Extension methods for String to handle file paths.
 extension StringExtension on String {
+  /// Removes the base path from a string path.
   String withoutBasePath(String path) => replaceFirst(
         '${path.withUnixPath()}/',
         '',
       );
 
+  /// Converts Windows path separators to Unix style.
   String withUnixPath() => replaceAll('\\', '/');
 
+  /// Converts Unix path separators to Windows style.
   String withWindowsPath() => replaceAll('/', '\\');
 
+  /// Converts path separators to the current platform's format.
   String withPlatformPath() => Platform.isWindows ? withWindowsPath() : this;
 }

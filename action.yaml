@@ -23,6 +23,14 @@ inputs:
     description: Enable debug output for troubleshooting
     required: false
     default: 'false'
+  branch:
+    description: Base branch for comparison
+    required: false
+    default: 'main'
+  remote:
+    description: Remote repository name
+    required: false
+    default: 'origin'
 
 runs:
   using: composite
@@ -36,11 +44,11 @@ runs:
     - name: Run exec command
       if: ${{ inputs.use-melos == 'false' }}
       shell: bash
-      run: dart_diff exec -- ${{ inputs.command }}
+      run: dart_diff exec --branch ${{ inputs.branch }} --remote ${{ inputs.remote }} -- ${{ inputs.command }}
       working-directory: ${{ inputs.working-dir }}
 
     - name: Run melos command
       if: ${{ inputs.use-melos == 'true' }}
       shell: bash
-      run: melos exec -- dart_diff exec -- ${{ inputs.command }}
+      run: melos exec --diff=${{inputs.remote}}/${{ inputs.branch }}  -- dart_diff exec --branch ${{ inputs.branch }} --remote ${{ inputs.remote }} -- ${{ inputs.command }}
       working-directory: ${{ inputs.working-dir }}

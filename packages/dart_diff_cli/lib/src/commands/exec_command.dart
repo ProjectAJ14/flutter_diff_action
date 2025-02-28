@@ -4,7 +4,10 @@ import 'package:args/command_runner.dart';
 import 'package:dart_diff_cli/src/utils/index.dart';
 import 'package:mason_logger/mason_logger.dart';
 
+/// Command to execute Flutter/Dart commands on changed files.
+///
 class ExecCommand extends Command<int> {
+  /// Creates a new instance of [ExecCommand].
   ExecCommand({
     required Logger logger,
   }) : _logger = logger {
@@ -20,16 +23,11 @@ class ExecCommand extends Command<int> {
         abbr: Options.remote.abbr,
         defaultsTo: Options.remote.defaultVal,
         help: 'Specify the remote repository to use for git diff',
-      )
-      ..addFlag(
-        'flutter',
-        abbr: 'f',
-        help: 'Run flutter test instead of dart test',
       );
   }
 
   @override
-  String get description => 'A exec command that just prints one joke';
+  String get description => 'Execute a command on changed Dart/Flutter files';
 
   @override
   String get name => 'exec';
@@ -39,9 +37,9 @@ class ExecCommand extends Command<int> {
   @override
   Future<int> run() async {
     if (!isFlutterProjectRoot()) {
-      print(
+      _logger.err(
         'Error: No pubspec.yaml file found. '
-        'This command should be run from the root of your Flutter project.',
+        'This command should be run from the root of your Dart/Flutter project.',
       );
       return 1;
     }
@@ -52,63 +50,77 @@ class ExecCommand extends Command<int> {
     }
 
     final args = argResults!;
-    _logger.info('args: ${args.arguments.join(', ')}');
+    _logger.detail('Arguments: ${args.arguments.join(', ')}');
 
     final branch = Options.branch.parsedValue(args);
     final remote = Options.remote.parsedValue(args);
 
+    _logger.detail('Using remote: $remote, branch: $branch');
+
     final extraArgs = args.rest;
     if (extraArgs.isEmpty) {
-      _logger.info('No extra args.\n$usage');
+      _logger.err('No command specified.\n$usage');
       return 1;
     }
 
     final bool isTest = extraArgs.any((e) => e == 'test');
+    _logger.info('Running: ${extraArgs.join(' ')}');
 
-    print('Running: ${extraArgs.join(' ')}');
+    final relativeBasePath = getRelativeBasePath(logger: _logger);
 
-    final relativeBasePath = getRelativeBasePath(_logger);
-
-    final modifiedFiles = getModifiedFiles(remote, branch)
+    final modifiedFiles = getModifiedFiles(remote, branch, logger: _logger)
         .where(
           (file) => file.endsWith('.dart') && file.startsWith(relativeBasePath),
         )
         .toList();
 
     if (modifiedFiles.isEmpty) {
-      print('No modified Dart files detected.');
+      _logger.info('No modified Dart files detected.');
       return 0;
     }
 
-    print('Modified Dart files:\n${modifiedFiles.join('\n')}');
+    _logger.info('Modified Dart files[${modifiedFiles.length}]:');
+    for (final file in modifiedFiles) {
+      _logger.info('  - $file');
+    }
 
     final files = <String>[];
     final testFiles = <String>{};
 
     for (final file in modifiedFiles) {
       final relativePath = file.withoutBasePath(relativeBasePath);
-      if (File(relativePath.withPlatformPath()).existsSync()) {
+      final platformPath = relativePath.withPlatformPath();
+
+      if (File(platformPath).existsSync()) {
         files.add(relativePath);
         if (!isTest) {
           continue;
         }
+
         if (relativePath.endsWith('_test.dart')) {
           testFiles.add(relativePath);
         } else {
           final testFile = calculateTestFile(relativePath);
           if (File(testFile).existsSync()) {
             testFiles.add(testFile);
+            _logger.detail('Added test file: $testFile for $relativePath');
           } else {
-            print('No test file found for $relativePath. Skipping...');
+            _logger.detail('No test file found for $relativePath. Skipping...');
           }
         }
       } else {
-        print('File with path: $relativePath does not exist. Skipping...');
+        _logger.warn('File does not exist: $platformPath. Skipping...');
       }
     }
 
     final fileList = isTest ? testFiles : files;
-    runCommand([...extraArgs, ...fileList]);
+    if (fileList.isEmpty) {
+      _logger.info('No files to process.');
+      return 0;
+    }
+
+    _logger.detail('Processing ${fileList.length} files');
+    runCommand([...extraArgs, ...fileList], logger: _logger);
 
     return 0;
   }
