@@ -35,7 +35,7 @@ runs:
   steps:
     - name: Set up dart-diff
       shell: bash
-      run: dart pub global activate --source path packages/dart_diff_cli
+      run: dart pub global activate dart_diff_cli
       working-directory: ${{ github.workspace }}
       # TODO(Droyder7): Replace with the published package once it's published
 
