@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#042330;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0B4863;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <!-- Background with rounded corners -->
+  <rect width="1024" height="1024" fill="url(#bg-gradient)" rx="80" ry="80"/>
+  
+  <!-- Grid pattern for tech feel -->
+  <path d="M0 0h1024v1024H0z" fill="url(#grid)" opacity="0.07"/>
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#FFFFFF" stroke-width="0.5"/>
+  </pattern>
+  
+  <!-- Central dartboard target with tech feel -->
+  <circle cx="512" cy="512" r="400" fill="#042330" stroke="#0175C2" stroke-width="2" opacity="0.7"/>
+  <circle cx="512" cy="512" r="350" fill="none" stroke="#0175C2" stroke-width="1" opacity="0.4"/>
+  <circle cx="512" cy="512" r="300" fill="none" stroke="#0175C2" stroke-width="1" opacity="0.3"/>
+  
+  <!-- Stylized Dart logo as core element -->
+  <g transform="translate(512, 512) scale(1.1)">
+    <!-- Left side (original code) with better contrast -->
+    <path d="M-250,-250 L0,0 L-250,250 L-250,-250" fill="#0175C2" opacity="0.95"/>
+    <path d="M-250,250 L0,0 L250,250 L-250,250" fill="#0175C2" opacity="0.95"/>
+    
+    <!-- Right side (modified code) with better contrast -->
+    <path d="M250,-250 L0,0 L250,250 L250,-250" fill="#42A5F5" opacity="0.95"/>
+    <path d="M-250,-250 L0,0 L250,-250 L-250,-250" fill="#42A5F5" opacity="0.95"/>
+    
+    <!-- Central connector -->
+    <circle cx="0" cy="0" r="40" fill="#FFFFFF" opacity="0.9"/>
+    <circle cx="0" cy="0" r="30" fill="#0175C2" opacity="0.9"/>
+  </g>
+  
+  <!-- Animated diff symbols with better positioning -->
+  <g filter="url(#glow)">
+    <!-- Plus symbol (green) -->
+    <rect x="262" y="472" width="100" height="30" fill="#4CAF50" rx="5" ry="5"/>
+    <rect x="297" y="437" width="30" height="100" fill="#4CAF50" rx="5" ry="5"/>
+    
+    <!-- Minus symbol (red) -->
+    <rect x="662" y="472" width="100" height="30" fill="#F44336" rx="5" ry="5"/>
+  </g>
+  
+  <!-- Dynamic code lines -->
+  <g>
+    <!-- Left side code block -->
+    <rect x="170" y="600" width="280" height="200" fill="#011627" opacity="0.8" rx="10" ry="10"/>
+    <g stroke="#FFFFFF" stroke-width="2" opacity="0.7">
+      <line x1="190" y1="630" x2="350" y2="630"/>
+      <line x1="190" y1="660" x2="420" y2="660" stroke="#4CAF50"/>
+      <line x1="190" y1="690" x2="380" y2="690"/>
+      <line x1="190" y1="720" x2="410" y2="720"/>
+      <line x1="190" y1="750" x2="360" y2="750"/>
+    </g>
+    
+    <!-- Right side code block -->
+    <rect x="574" y="600" width="280" height="200" fill="#011627" opacity="0.8" rx="10" ry="10"/>
+    <g stroke="#FFFFFF" stroke-width="2" opacity="0.7">
+      <line x1="594" y1="630" x2="754" y2="630"/>
+      <line x1="594" y1="660" x2="694" y2="660" stroke="#F44336"/>
+      <line x1="594" y1="690" x2="784" y2="690"/>
+      <line x1="594" y1="720" x2="824" y2="720"/>
+      <line x1="594" y1="750" x2="774" y2="750"/>
+    </g>
+    
+    <!-- Connecting arrows between blocks -->
+    <path d="M450 680 C490 680, 514 680, 574 680" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="10,5"/>
+    <polygon points="574,680 564,675 564,685" fill="#FFFFFF"/>
+  </g>
+  
+  <!-- Terminal frame -->
+  <rect x="170" y="820" width="684" height="80" fill="#011627" opacity="0.9" rx="10" ry="10"/>
+  
+  <!-- "DART DIFF CLI" text with tech feel -->
+  <text x="512" y="875" font-family="'JetBrains Mono', monospace" font-size="50" font-weight="bold" fill="#FFFFFF" text-anchor="middle" filter="url(#glow)">DART DIFF CLI</text>
+  
+  <!-- Animated terminal cursor -->
+  <rect x="730" y="865" width="14" height="28" fill="#0175C2">
+    <animate attributeName="opacity" values="0;1;0" dur="1s" repeatCount="indefinite"/>
+  </rect>
+  
+  <!-- Tech decorative elements -->
+  <g opacity="0.5">
+    <!-- Binary code snippets -->
+    <text x="120" y="150" font-family="monospace" font-size="12" fill="#0175C2">01110100 01100001 01110010 01100100</text>
+    <text x="720" y="180" font-family="monospace" font-size="12" fill="#0175C2">01100100 01101001 01100110 01100110</text>
+    
+    <!-- Edge accents -->
+    <path d="M40 140 L80 140 L80 180 L40 180 Z" fill="none" stroke="#0175C2" stroke-width="2"/>
+    <path d="M944 140 L904 140 L904 180 L944 180 Z" fill="none" stroke="#0175C2" stroke-width="2"/>
+    <path d="M40 884 L80 884 L80 844 L40 844 Z" fill="none" stroke="#0175C2" stroke-width="2"/>
+    <path d="M944 884 L904 884 L904 844 L944 844 Z" fill="none" stroke="#0175C2" stroke-width="2"/>
+  </g>
+</svg>

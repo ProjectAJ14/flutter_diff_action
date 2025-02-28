@@ -1,10 +1,9 @@
 <p align="center">
-  <h1 align="center">Dart Diff CLI</h1>
+  <a href="https://pub.dev/packages/dart_diff_cli">
+    <img src="https://github.com/user-attachments/assets/2f925259-f0e2-448e-937e-22331f916d89" alt="Nonstop Logo" height="252" />
+  </a>
   <p align="center">Optimizes Flutter/Dart development workflows by running commands only on changed files, significantly speeding up CI/CD pipelines and local development.</p>
 </p>
-
-
-# dart_diff_cli
 
 [![dart_diff_cli](https://img.shields.io/pub/v/dart_diff_cli.svg?label=dart_diff_cli&logo=dart&color=blue&style=for-the-badge)](https://pub.dev/packages/dart_diff_cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
@@ -14,12 +13,11 @@ A command-line interface for running Flutter and Dart commands efficiently on ch
 ## Table of Contents
 
 - [Overview](#overview)
-- [Installation](#installation)
-- [Global Options](#global-options) 
 - [Commands](#commands)
   - [exec](#exec)
   - [update](#update)
 - [Common Workflows](#common-workflows)
+- [Global Options](#global-options)
 - [Troubleshooting](#troubleshooting)
 
 ## Overview
@@ -32,38 +30,7 @@ Key features include:
 - Supporting both standard projects and Melos-based mono-repos
 - Providing detailed logging for troubleshooting
 
-## Installation
 
-Install the latest version:
-
-```bash
-dart pub global activate dart_diff_cli
-```
-
-Install a specific version:
-
-```bash
-dart pub global activate dart_diff_cli <version>
-```
-
-> If you haven't already, you might need to
-> [set up your path](https://dart.dev/tools/pub/cmd/pub-global#running-a-script-from-your-path).
-
-Alternative usage (e.g., in CI environments):
-
-```bash
-dart pub global run dart_diff_cli:dart_diff <command> <args>
-```
-
-## Global Options
-
-The following options can be used with any command:
-
-| Option      | Alias | Description                                         |
-|-------------|-------|-----------------------------------------------------|
-| `--version` | `-v`  | Print the current version of the CLI                |
-| `--verbose` |       | Enable verbose logging including all shell commands |
-| `--help`    | `-h`  | Display help information for commands               |
 
 ## Commands
 
@@ -73,6 +40,13 @@ Executes Flutter/Dart commands on changed files.
 
 ```bash
 dart_diff exec [options] -- [command] [command-args]
+```
+
+### Alias
+- ddf
+
+```bash
+ddf exec [options] -- [command] [command-args]
 ```
 
 **Options:**
@@ -88,7 +62,7 @@ dart_diff exec [options] -- [command] [command-args]
 
 ```bash
 # Run tests on changed files compared to main branch
-dart_diff exec -- test
+dart_diff exec -- flutter test
 
 # Run tests against a different branch
 dart_diff exec -b develop -- flutter test
@@ -135,9 +109,6 @@ The command:
 ### Speeding up test runs during development
 
 ```bash
-# Check what files have been modified compared to main
-git diff --name-only main
-
 # Run tests only on the modified files
 dart_diff exec -- flutter test
 
@@ -164,6 +135,16 @@ dart_diff exec -- flutter test
 # In your CI pipeline, compare against the target branch
 dart_diff exec -b main -- flutter test --no-pub --coverage
 ```
+
+## Global Options
+
+The following options can be used with any command:
+
+| Option      | Alias | Description                                         |
+|-------------|-------|-----------------------------------------------------|
+| `--version` | `-v`  | Print the current version of the CLI                |
+| `--verbose` |       | Enable verbose logging including all shell commands |
+| `--help`    | `-h`  | Display help information for commands               |
 
 ## Troubleshooting
 
