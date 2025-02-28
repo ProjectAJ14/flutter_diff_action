@@ -1,7 +1,5 @@
 name: Flutter Diff Action
-description: |
-  Run Flutter/Dart commands with diff checking capabilities.
-  Supports both standard Flutter commands and Melos-based workflows.
+description: Run Flutter/Dart commands with diff checking capabilities.
 author: ProjectAJ14
 branding:
   icon: zap
