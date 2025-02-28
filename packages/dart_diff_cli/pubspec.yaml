@@ -1,6 +1,6 @@
 name: dart_diff_cli
 description: Run Flutter/Dart commands with diff checking capabilities.
-version: 0.0.2
+version: 0.0.3
 homepage: https://github.com/ProjectAJ14/flutter_diff_action
 documentation: https://github.com/ProjectAJ14/flutter_diff_action/tree/main/packages/dart_diff_cli
 repository: https://github.com/ProjectAJ14/flutter_diff_action/tree/main/packages/dart_diff_cli
