@@ -55,8 +55,9 @@ const packageVersion = '$version';
         logger.warn('version.dart has been modified but the '
             'last commit is not a release commit');
       }
+    } else {
+      logger.success('No changes detected');
     }
-    logger.success('No changes detected');
   } catch (e) {
     logger.err('An error occurred while updating the version $e');
     exit(1);
