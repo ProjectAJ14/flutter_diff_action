@@ -1,10 +1,9 @@
 <p align="center">
-  <h1 align="center">Dart Diff CLI</h1>
+  <a href="https://pub.dev/packages/dart_diff_cli">
+    <img src="https://github.com/user-attachments/assets/2f925259-f0e2-448e-937e-22331f916d89" alt="Nonstop Logo" height="252" />
+  </a>
   <p align="center">Optimizes Flutter/Dart development workflows by running commands only on changed files, significantly speeding up CI/CD pipelines and local development.</p>
 </p>
-
-
-# dart_diff_cli
 
 [![dart_diff_cli](https://img.shields.io/pub/v/dart_diff_cli.svg?label=dart_diff_cli&logo=dart&color=blue&style=for-the-badge)](https://pub.dev/packages/dart_diff_cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
