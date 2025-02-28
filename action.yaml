@@ -50,5 +50,5 @@ runs:
     - name: Run melos command
       if: ${{ inputs.use-melos == 'true' }}
       shell: bash
-      run: melos exec -- dart_diff exec --branch ${{ inputs.branch }} --remote ${{ inputs.remote }} -- ${{ inputs.command }}
+      run: melos exec --diff=${{inputs.remote}}/${{ inputs.branch }}  -- dart_diff exec --branch ${{ inputs.branch }} --remote ${{ inputs.remote }} -- ${{ inputs.command }}
       working-directory: ${{ inputs.working-dir }}
