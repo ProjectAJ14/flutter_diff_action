@@ -1,3 +1,7 @@
+## 0.0.3+2
+
+ - **DOCS**(dart_diff_cli): reorganize README for clarity and remove redundant installation section.
+
 ## 0.0.3+1
 
  - **DOCS**: enhance project description and README for improved clarity.
