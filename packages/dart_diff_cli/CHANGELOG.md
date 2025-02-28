@@ -1,3 +1,7 @@
+## 0.0.3+1
+
+ - **DOCS**: enhance project description and README for improved clarity.
+
 ## 0.0.3
 
  - **FEAT**: add main entry point.
