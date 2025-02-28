@@ -8,7 +8,8 @@ import 'package:pub_updater/pub_updater.dart';
 
 const executableName = 'dart_diff';
 const packageName = 'dart_diff_cli';
-const description = 'Run Flutter/Dart commands with diff checking capabilities.';
+const description =
+    'Run Flutter/Dart commands with diff checking capabilities.';
 
 /// {@template dart_diff_cli_command_runner}
 /// A [CommandRunner] for the CLI.

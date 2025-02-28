@@ -3,36 +3,53 @@ import 'dart:io';
 import 'package:dart_diff_cli/src/utils/common_utils.dart';
 import 'package:mason_logger/mason_logger.dart';
 
-String getGitRepoRoot() {
+/// Gets the root directory of the git repository.
+String getGitRepoRoot({Logger? logger}) {
   final result = Process.runSync('git', ['rev-parse', '--show-toplevel']);
   if (result.exitCode != 0) {
-    print('Error getting git repo root: ${result.stderr}');
+    logger?.err('Error getting git repo root: ${result.stderr}');
     exit(1);
   }
   final path = result.stdout.toString().trim();
+  logger?.detail('Git repo root: $path');
   return path;
 }
 
+/// Gets the path relative to the git repository root.
+///
+/// Returns the path of the current directory relative to the git repository root.
+/// If [logger] is provided, it logs detailed information about the paths.
 String getRelativeBasePath([Logger? logger]) {
   final basePath = Directory.current.path.withUnixPath();
-  final repoRoot = getGitRepoRoot();
+  final repoRoot = getGitRepoRoot(logger: logger);
   final relativeBasePath = basePath.withoutBasePath(repoRoot);
-  logger?.info('Current directory: $relativeBasePath \n'
-      'Repository root: $repoRoot \n'
-      'Relative base path: $relativeBasePath \n');
+  logger?.detail('Current directory: $basePath\n'
+      'Repository root: $repoRoot\n'
+      'Relative base path: $relativeBasePath');
   return relativeBasePath;
 }
 
-List<String> getModifiedFiles(String remote, String branch) {
+/// Gets the list of modified files between current branch and target branch.
+///
+/// [remote] specifies the git remote (e.g., 'origin')
+/// [branch] specifies the target branch (e.g., 'main')
+/// [logger] optional logger for output
+///
+/// Returns a list of modified file paths.
+List<String> getModifiedFiles(String remote, String branch, {Logger? logger}) {
   if (!_isGitInstalled()) {
-    print('Error: Git is not installed or not found in PATH.');
+    logger?.err('Error: Git is not installed or not found in PATH.');
     exit(1);
   }
   if (!_isGitRepository()) {
-    print('Error: Not a git repository.');
+    logger?.err('Error: Not a git repository.');
     exit(1);
   }
-  runCommand(['git', 'fetch', remote, branch], output: false);
+
+  logger?.detail('Fetching remote branch: $remote/$branch');
+  runCommand(['git', 'fetch', remote, branch], output: false, logger: logger);
+
+  logger?.detail('Getting modified files between HEAD and $remote/$branch');
   final result = runCommand(
     [
       'git',
@@ -42,10 +59,15 @@ List<String> getModifiedFiles(String remote, String branch) {
       '$remote/$branch',
     ],
     output: false,
+    logger: logger,
   );
-  return result.split('\n').map((e) => e.trim()).toList();
+  final files =
+      result.split('\n').where((line) => line.trim().isNotEmpty).toList();
+  logger?.detail('Found ${files.length} modified files');
+  return files;
 }
 
+/// Checks if git is installed on the system.
 bool _isGitInstalled() {
   try {
     final result = Process.runSync('git', ['--version']);
@@ -55,6 +77,7 @@ bool _isGitInstalled() {
   }
 }
 
+/// Checks if the current directory is part of a git repository.
 bool _isGitRepository() {
   final result = Process.runSync('git', ['rev-parse', '--is-inside-work-tree']);
   return result.exitCode == 0 && result.stdout.toString().trim() == 'true';
