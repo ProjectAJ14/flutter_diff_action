@@ -29,6 +29,14 @@ inputs:
     description: Remote repository name
     required: false
     default: 'origin'
+  include-dependency-tests:
+    description: Include tests for files that use changed dependencies
+    required: false
+    default: 'false'
+  dependency-scan-depth:
+    description: Comma-separated list of directories to scan for dependency usage
+    required: false
+    default: 'lib/,test/'
 
 runs:
   using: composite
@@ -42,11 +50,29 @@ runs:
     - name: Run exec command
       if: ${{ inputs.use-melos == 'false' }}
       shell: bash
-      run: dart_diff exec --branch ${{ inputs.branch }} --remote ${{ inputs.remote }} -- ${{ inputs.command }}
+      run: |
+        CMD="dart_diff exec --branch ${{ inputs.branch }} --remote ${{ inputs.remote }}"
+        if [ "${{ inputs.include-dependency-tests }}" = "true" ]; then
+          CMD="$CMD --include-dependency-tests"
+        fi
+        if [ "${{ inputs.dependency-scan-depth }}" != "lib/,test/" ]; then
+          CMD="$CMD --dependency-scan-depth '${{ inputs.dependency-scan-depth }}'"
+        fi
+        CMD="$CMD -- ${{ inputs.command }}"
+        eval $CMD
       working-directory: ${{ inputs.working-dir }}
 
     - name: Run melos command
       if: ${{ inputs.use-melos == 'true' }}
       shell: bash
-      run: melos exec --diff=${{inputs.remote}}/${{ inputs.branch }}  -- dart_diff exec --branch ${{ inputs.branch }} --remote ${{ inputs.remote }} -- ${{ inputs.command }}
+      run: |
+        CMD="dart_diff exec --branch ${{ inputs.branch }} --remote ${{ inputs.remote }}"
+        if [ "${{ inputs.include-dependency-tests }}" = "true" ]; then
+          CMD="$CMD --include-dependency-tests"
+        fi
+        if [ "${{ inputs.dependency-scan-depth }}" != "lib/,test/" ]; then
+          CMD="$CMD --dependency-scan-depth '${{ inputs.dependency-scan-depth }}'"
+        fi
+        CMD="$CMD -- ${{ inputs.command }}"
+        melos exec --diff=${{inputs.remote}}/${{ inputs.branch }} -- $CMD
       working-directory: ${{ inputs.working-dir }}

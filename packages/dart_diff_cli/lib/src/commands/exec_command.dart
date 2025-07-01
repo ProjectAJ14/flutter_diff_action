@@ -23,6 +23,18 @@ class ExecCommand extends Command<int> {
         abbr: Options.remote.abbr,
         defaultsTo: Options.remote.defaultVal,
         help: 'Specify the remote repository to use for git diff',
+      )
+      ..addFlag(
+        Flags.includeDependencyTests.name,
+        abbr: Flags.includeDependencyTests.abbr,
+        defaultsTo: false,
+        help: 'Include tests for files that use changed dependencies',
+      )
+      ..addOption(
+        Options.dependencyScanDepth.name,
+        abbr: Options.dependencyScanDepth.abbr,
+        defaultsTo: Options.dependencyScanDepth.defaultVal,
+        help: 'Comma-separated list of directories to scan for dependency usage',
       );
   }
 
@@ -54,6 +66,8 @@ class ExecCommand extends Command<int> {
 
     final branch = Options.branch.parsedValue(args);
     final remote = Options.remote.parsedValue(args);
+    final includeDependencyTests = Flags.includeDependencyTests.parsedValue(args);
+    final dependencyScanDepth = Options.dependencyScanDepth.parsedValue(args);
 
     _logger.detail('Using remote: $remote, branch: $branch');
 
@@ -68,14 +82,29 @@ class ExecCommand extends Command<int> {
 
     final relativeBasePath = getRelativeBasePath(logger: _logger);
 
-    final modifiedFiles = getModifiedFiles(remote, branch, logger: _logger)
+    final allModifiedFiles = getModifiedFiles(remote, branch, logger: _logger);
+    final modifiedFiles = allModifiedFiles
         .where(
           (file) => file.endsWith('.dart') && file.startsWith(relativeBasePath),
         )
         .toList();
 
-    if (modifiedFiles.isEmpty) {
-      _logger.info('No modified Dart files detected.');
+    // Process dependency changes if enabled
+    final Set<String> dependencyAffectedFiles = {};
+    if (includeDependencyTests) {
+      dependencyAffectedFiles.addAll(
+        await _processDependencyChanges(
+          allModifiedFiles,
+          remote,
+          branch,
+          dependencyScanDepth,
+          isTest,
+        ),
+      );
+    }
+
+    if (modifiedFiles.isEmpty && dependencyAffectedFiles.isEmpty) {
+      _logger.info('No modified Dart files or dependency changes detected.');
       return 0;
     }
 
@@ -113,15 +142,152 @@ class ExecCommand extends Command<int> {
       }
     }
 
-    final fileList = isTest ? testFiles : files;
-    if (fileList.isEmpty) {
+    // Combine regular files with dependency-affected files
+    final Set<String> allFiles = {};
+    if (isTest) {
+      allFiles.addAll(testFiles);
+    } else {
+      allFiles.addAll(files);
+    }
+    allFiles.addAll(dependencyAffectedFiles);
+
+    if (allFiles.isEmpty) {
       _logger.info('No files to process.');
       return 0;
     }
 
+    final fileList = allFiles.toList();
     _logger.detail('Processing ${fileList.length} files');
+    _logger.info('Files to process:');
+    for (final file in fileList) {
+      _logger.info('  - $file');
+    }
+    
     runCommand([...extraArgs, ...fileList], logger: _logger);
 
     return 0;
+  }
+
+  /// Processes dependency changes and returns affected files.
+  Future<Set<String>> _processDependencyChanges(
+    List<String> allModifiedFiles,
+    String remote,
+    String branch,
+    String dependencyScanDepth,
+    bool isTest,
+  ) async {
+    final Set<String> affectedFiles = {};
+    
+    try {
+      // Find changed pubspec files
+      final changedPubspecs = PubspecUtils.getChangedPubspecFiles(
+        allModifiedFiles,
+        logger: _logger,
+      );
+      
+      if (changedPubspecs.isEmpty) {
+        _logger.detail('No pubspec.yaml files changed');
+        return affectedFiles;
+      }
+      
+      // Process each changed pubspec file
+      for (final pubspecPath in changedPubspecs) {
+        final packageRoot = pubspecPath.replaceAll('/pubspec.yaml', '');
+        if (packageRoot.isEmpty) {
+          // Root pubspec
+          await _processPackageDependencyChanges(
+            pubspecPath,
+            '.',
+            remote,
+            branch,
+            dependencyScanDepth,
+            isTest,
+            affectedFiles,
+          );
+        } else {
+          // Package pubspec
+          await _processPackageDependencyChanges(
+            pubspecPath,
+            packageRoot,
+            remote,
+            branch,
+            dependencyScanDepth,
+            isTest,
+            affectedFiles,
+          );
+        }
+      }
+      
+    } catch (e) {
+      _logger.warn('Error processing dependency changes: $e');
+    }
+    
+    return affectedFiles;
+  }
+
+  /// Processes dependency changes for a specific package.
+  Future<void> _processPackageDependencyChanges(
+    String pubspecPath,
+    String packageRoot,
+    String remote,
+    String branch,
+    String dependencyScanDepth,
+    bool isTest,
+    Set<String> affectedFiles,
+  ) async {
+    try {
+      // Parse current pubspec
+      final currentPubspec = PubspecUtils.parsePubspec(pubspecPath, logger: _logger);
+      if (currentPubspec == null) {
+        _logger.warn('Could not parse current pubspec: $pubspecPath');
+        return;
+      }
+      
+      // Get previous pubspec from git
+      final previousPubspecContent = PubspecUtils.getPubspecFromRevision(
+        pubspecPath,
+        '$remote/$branch',
+        logger: _logger,
+      );
+      
+      if (previousPubspecContent == null) {
+        _logger.detail('No previous version of pubspec found: $pubspecPath');
+        return;
+      }
+      
+      final previousPubspec = Pubspec.parse(previousPubspecContent);
+      
+      // Compare dependencies
+      final changes = PubspecUtils.compareDependencies(
+        currentPubspec,
+        previousPubspec,
+        logger: _logger,
+      );
+      
+      if (!changes.hasChanges) {
+        _logger.detail('No dependency changes in $pubspecPath');
+        return;
+      }
+      
+      _logger.info('Dependency changes detected in $pubspecPath:');
+      for (final change in [...changes.added, ...changes.removed, ...changes.modified]) {
+        _logger.info('  - $change');
+      }
+      
+      // Find files affected by these dependency changes
+      final searchPaths = dependencyScanDepth.split(',').map((p) => p.trim()).toList();
+      final packageAffectedFiles = DependencyAnalyzer.getAffectedFiles(
+        changes.allChangedDependencies,
+        packageRoot,
+        includeTests: isTest,
+        logger: _logger,
+      );
+      
+      _logger.info('Found ${packageAffectedFiles.length} files affected by dependency changes in $packageRoot');
+      affectedFiles.addAll(packageAffectedFiles);
+      
+    } catch (e) {
+      _logger.warn('Error processing package dependency changes for $pubspecPath: $e');
+    }
   }
 }
