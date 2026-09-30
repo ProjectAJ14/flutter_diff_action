@@ -180,7 +180,8 @@ runs:
           # Fetch, and deepen a shallow clone, once here instead of in every package.
           if [ -n "$base" ]; then fetch=$base; else fetch=+refs/heads/$branch:refs/remotes/$DIFF_REMOTE/$branch; fi
           git fetch "$DIFF_REMOTE" "$fetch" || echo "::warning::git fetch failed, using the local $ref"
-          for depth in 100 1000; do
+          # A pull request's merge commit needs only 1: its first parent is the base.
+          for depth in 1 100 1000; do
             if git merge-base "$ref" HEAD > /dev/null 2>&1 || [ "$(git rev-parse --is-shallow-repository)" != true ]; then break; fi
             git fetch --deepen="$depth" "$DIFF_REMOTE" "$fetch"
             git fetch --deepen="$depth" "$DIFF_REMOTE" "$(git rev-parse HEAD)"
