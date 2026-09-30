@@ -59,6 +59,7 @@ jobs:
         command:
           - 'flutter test --no-pub --coverage'
           - 'flutter test'
+          - 'flutter test --plain-name "Counter increments"'
           - 'flutter analyze --fatal-infos'
           - 'flutter analyze'
           - 'dart format --set-exit-if-changed'

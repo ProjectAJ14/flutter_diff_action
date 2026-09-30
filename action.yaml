@@ -66,10 +66,10 @@ runs:
       run: |
         verbose=
         if [ "$DIFF_DEBUG" = "true" ]; then verbose=--verbose; fi
-        # $DIFF_COMMAND is unquoted on purpose: it is split into the command and
-        # its arguments (e.g. "flutter test --coverage"). set -f stops globbing.
-        set -f
-        dart_diff $verbose exec --branch "$DIFF_BRANCH" --remote "$DIFF_REMOTE" -- $DIFF_COMMAND
+        # The command is the workflow author's own input and keeps shell
+        # quoting (e.g. --plain-name "login flow"), so it is evaluated. Branch
+        # and remote were validated above and stay quoted inside the eval.
+        eval "dart_diff $verbose exec --branch \"\$DIFF_BRANCH\" --remote \"\$DIFF_REMOTE\" -- $DIFF_COMMAND"
       working-directory: ${{ inputs.working-dir }}
 
     - name: Run melos command

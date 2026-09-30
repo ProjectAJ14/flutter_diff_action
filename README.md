@@ -168,7 +168,7 @@ jobs:
 
 1. Installs the `dart_diff` CLI from the Action's own checkout, so `@v2` (or any tag or SHA) always runs the CLI code of that same tag. Nothing is downloaded from pub.dev.
 2. Finds the files changed against the merge base with `<remote>/<branch>`, plus untracked files. Paths are limited to `working-dir`.
-3. Keeps the Dart files and runs the command on them. Long file lists are split over several runs to stay under the OS command-line limit; the Action fails if any run fails.
+3. Keeps the Dart files and runs the command on them. Long file lists are split over several runs to stay under the OS command-line limit; the Action fails if any run fails. A test command that would need several runs runs the full suite once instead, so coverage and the summary stay whole.
 4. For test commands (`flutter test`, `dart test`, `fvm flutter test`), each changed file is mapped to its test (`lib/a.dart` -> `test/a_test.dart`). The **full** test suite runs instead when a change can't be mapped to a test:
    - `pubspec.yaml`, `pubspec.lock`, `dart_test.yaml`, `build.yaml` or `l10n.yaml` changed,
    - a non-test file under `test/` changed (helpers, fixtures, goldens),
@@ -180,7 +180,7 @@ jobs:
 
 With `use-melos: true` the Action runs `git fetch` once, then `melos exec --diff=<remote>/<branch>` runs `dart_diff exec --no-fetch` in each changed package.
 
-Inputs are passed to the scripts through environment variables, never pasted into them. `branch` and `remote` may only contain `A-Za-z0-9._/@+-` and can't start with `-`. `command` is split into words on whitespace and is not glob-expanded. Quotes in it don't group words, so pass one plain command per step.
+Inputs are passed to the scripts through environment variables, never pasted into them. `branch` and `remote` may only contain `A-Za-z0-9._/@+-` and can't start with `-`. `command` keeps shell quoting (e.g. `flutter test --plain-name "login flow"`), since it is your own workflow's input; don't build it from untrusted text such as PR titles.
 
 ## Contributing
 
