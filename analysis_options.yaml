@@ -1,7 +1,10 @@
-include: package:flutter_lints/flutter.yaml
+include: package:lints/recommended.yaml
 
 analyzer:
   exclude:
+    # Flutter fixture apps with their own dependencies; CI checks them.
+    - example/**
+
 linter:
   rules:
     constant_identifier_names: false
