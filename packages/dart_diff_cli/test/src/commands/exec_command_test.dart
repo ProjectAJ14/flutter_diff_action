@@ -62,6 +62,18 @@ void main() {
       verifyNever(() => logger.info(any(that: startsWith('Running'))));
     });
 
+    test('leaves the command options alone without "--"', () async {
+      // melos 7 drops the "--" that melos exec passes to dart_diff.
+      repo.write('lib/a.dart', 'void a2() {}');
+
+      expect(
+        await runner.run(['exec', '--no-fetch', 'git', 'ls-files', '-m']),
+        0,
+      );
+      verify(() => logger.info('Running: git ls-files -m lib/a.dart'))
+          .called(1);
+    });
+
     test('passes existing modified Dart files to other commands', () async {
       repo
         ..write('lib/a.dart', 'void a2() {}')
@@ -148,6 +160,24 @@ void main() {
       verify(
         () => logger.err('Error: The branch and remote cannot start with "-".'),
       ).called(2);
+    });
+
+    test('runs the full suite instead of splitting a test run', () async {
+      repo
+        ..write('lib/a.dart', 'void a2() {}')
+        ..write('test/a_test.dart', 'void main() {}')
+        ..write('test/b_test.dart', 'void main() {}');
+      runner = CommandRunner<int>('dart_diff', '')
+        ..addCommand(ExecCommand(logger: logger, maxCommandLength: 1));
+
+      expect(await runner.run(['exec', '--', 'git', 'test']), 0);
+      verify(
+        () => logger.info(
+          'Too many test files for one command line, '
+          'running the full test suite.',
+        ),
+      ).called(1);
+      verify(() => logger.info('Running: git test')).called(1);
     });
 
     test('runs every chunk and returns the first failing exit code', () async {

@@ -75,7 +75,9 @@ ddf exec [options] -- [command] [command-args]
 
 Otherwise, a changed file with no matching test file is skipped, and nothing runs if no changed file has a test.
 
-**Long file lists:** the files are split over several runs of the command so each command line stays under the OS limit (6000 characters on Windows, leaving room for what `flutter.bat` adds to cmd.exe's 8191 limit). Every run happens, even after a failure.
+**Long file lists:** the files are split over several runs of the command so each command line stays under the OS limit (6000 characters on Windows, leaving room for what `flutter.bat` adds to cmd.exe's 8191 limit). Every run happens, even after a failure. A test command that would need several runs runs the full suite once instead, so coverage and the test summary stay whole.
+
+`exec` stops reading its own options at the first word of the command, so `--` is optional: `dart_diff exec -b develop flutter test --coverage` works too.
 
 **Exit codes:**
 

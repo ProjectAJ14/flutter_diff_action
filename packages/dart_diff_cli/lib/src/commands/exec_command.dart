@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:dart_diff_cli/src/utils/index.dart';
 import 'package:mason_logger/mason_logger.dart';
@@ -40,6 +41,12 @@ class ExecCommand extends Command<int> {
         help: 'Run git fetch for the base branch before the diff',
       );
   }
+
+  // Stop at the first positional argument, so the wrapped command's options
+  // (e.g. `flutter test --coverage`) are not parsed as ours even without
+  // `--`. Melos 7 drops the `--` that `melos exec` passes along.
+  @override
+  final argParser = ArgParser(allowTrailingOptions: false);
 
   @override
   String get description => 'Execute a command on changed Dart/Flutter files';
@@ -138,10 +145,18 @@ class ExecCommand extends Command<int> {
 
     _logger.detail('Processing ${fileList.length} files');
 
+    final commands = chunkArgs(extraArgs, fileList.toList(), _maxCommandLength);
+    // Split test runs would each overwrite the coverage report and print
+    // their own summary, so run the whole suite once instead.
+    if (isTest && commands.length > 1) {
+      _logger.info('Too many test files for one command line, '
+          'running the full test suite.');
+      return runCommand(extraArgs, logger: _logger);
+    }
+
     // Run every chunk, even after a failure, and report the first failure.
     var exitCode = 0;
-    for (final command
-        in chunkArgs(extraArgs, fileList.toList(), _maxCommandLength)) {
+    for (final command in commands) {
       final code = await runCommand(command, logger: _logger);
       if (exitCode == 0) exitCode = code;
     }
