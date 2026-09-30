@@ -347,17 +347,45 @@ void main() {
     });
 
     test('runs the full suite when every test is selected', () async {
+      final report = Directory('${repo.dir.parent.path}/report')..createSync();
       repo
         ..write('test/a_test.dart', 'void main() {}')
-        ..write('test/b_test.dart', 'void main() {}');
+        ..write('test/nested/b_test.dart', 'void main() {}')
+        // Not a test: `flutter test` only runs *_test.dart files.
+        ..write('test/helpers.dart', 'void help() {}');
 
-      expect(await runner.run(['exec', '--', 'git', 'test']), 0);
+      expect(
+        await runner.run(
+          ['exec', '--report', report.path, '--', 'git', 'test'],
+        ),
+        0,
+      );
       verify(
         () => logger.info(
           'Running on everything: every test uses the changed files.',
         ),
       ).called(1);
       verify(() => logger.info('Running: git test')).called(1);
+      final file = report.listSync().single as File;
+      expect(jsonDecode(file.readAsStringSync()), containsPair('ran', 'full'));
+    });
+
+    test('runs only the selected tests when a test outside test/ is picked',
+        () async {
+      // As many picked tests as files under test/, but not the same ones.
+      repo
+        ..write('test/b_test.dart', 'void main() {}')
+        ..git(['add', '.'])
+        ..git(['commit', '-qm', 'test'])
+        ..git(['push', '-q', 'origin', 'main'])
+        ..write('test/a_test.dart', 'void main() {}')
+        // `flutter test` alone wouldn't run it.
+        ..write('lib/a_test.dart', 'void main() {}');
+
+      expect(await runner.run(['exec', '--', 'git', 'test']), 0);
+      verify(
+        () => logger.info('Running: git test lib/a_test.dart test/a_test.dart'),
+      ).called(1);
     });
 
     test('runs the full suite instead of splitting a test run', () async {

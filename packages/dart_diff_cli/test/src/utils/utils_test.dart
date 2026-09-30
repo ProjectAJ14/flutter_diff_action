@@ -316,11 +316,14 @@ void main() {
         ),
         ['lib/a.dart'],
       );
-      verify(
+      verifyInOrder([
         () => logger.detail(
-          'No merge base with origin/main, deepening the history by 100',
-        ),
-      ).called(1);
+              'No merge base with origin/main, deepening the history by 1',
+            ),
+        () => logger.detail(
+              'No merge base with origin/main, deepening the history by 100',
+            ),
+      ]);
       verifyNever(() => logger.warn(any()));
     });
 
