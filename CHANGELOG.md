@@ -1,3 +1,10 @@
+## [2.2.1](https://github.com/ProjectAJ14/flutter_diff_action/compare/v2.2.0...v2.2.1) (2026-09-30)
+
+
+### Bug Fixes
+
+* **action:** pin the CLI's dependencies with a lockfile ([0b2289c](https://github.com/ProjectAJ14/flutter_diff_action/commit/0b2289c2f8d6486fe63aa99f69a7a872b90697a7))
+
 # [2.2.0](https://github.com/ProjectAJ14/flutter_diff_action/compare/v2.1.0...v2.2.0) (2026-09-30)
 
 
