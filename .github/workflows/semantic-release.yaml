@@ -1,11 +1,65 @@
 name: 🎯 Semantic Release
 
 on:
-  workflow_dispatch:  # 🔄 Manual workflow trigger
+  push:
+    branches: [main]
+  workflow_dispatch:  # 🔄 Manual trigger (also prereleases on other branches)
+
+# One release at a time. Queued runs check out the latest branch tip.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
+  release_cli:       # 📦 Version the CLI with Melos, then publish it to pub.dev
+    name: 📦 Release CLI
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 📝 Push the release commit and tag
+      actions: write   # 🚀 Dispatch publish.yaml
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: 🎯 Set up Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: 📦 Install dependencies
+        run: dart pub get
+
+      - name: 🏷️ Version the CLI
+        id: version
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          dart run melos version --yes
+          tag=$(git tag --points-at HEAD 'dart_diff_cli-v*')
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "CLI release: ${tag:-none}"
+
+      # Atomic, so if main moved, neither the commit nor the tag lands.
+      - name: ⬆️ Push release commit and tag
+        if: steps.version.outputs.tag != ''
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: git push --atomic origin HEAD:refs/heads/main "refs/tags/$TAG"
+
+      # Pushes made with GITHUB_TOKEN don't trigger workflows; dispatches do.
+      - name: 🚀 Publish to pub.dev
+        if: steps.version.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: gh workflow run publish.yaml --ref "$TAG"
+
   create_release:    # 📦 Create and publish release
     name: 🚀 Generate Release
+    needs: release_cli
+    if: ${{ !failure() && !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write        # 📝 Repository content modification
@@ -16,6 +70,7 @@ jobs:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref_name }}  # 🔁 Includes the CLI release commit
           fetch-depth: 0     # 📚 Full git history for versioning
           persist-credentials: false  # 🔒 Security best practice
 
@@ -32,6 +87,17 @@ jobs:
         id: semantic   # 🔍 Reference for output steps
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 🔑 Authentication
+
+      # Users pin `@v<major>`, so point it at each stable release.
+      - name: 🔖 Move major version tag
+        if: steps.semantic.outputs.new_release_published == 'true' && github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.semantic.outputs.new_release_version }}
+          MAJOR: ${{ steps.semantic.outputs.new_release_major_version }}
+        run: |
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "refs/tags/v${VERSION}^{commit}:refs/tags/v${MAJOR}"
 
       - name: 📊 Display Release Information
         if: steps.semantic.outputs.new_release_published == 'true'
