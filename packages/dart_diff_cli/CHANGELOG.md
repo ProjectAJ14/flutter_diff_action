@@ -1,3 +1,7 @@
+## 0.1.2+1
+
+ - **FIX**(action): pin the CLI's dependencies with a lockfile.
+
 ## 0.1.2
 
  - **PERF**: deepen a shallow clone by 1 before 100 commits.
