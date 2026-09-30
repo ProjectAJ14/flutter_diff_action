@@ -129,8 +129,10 @@ jobs:
       - name: Install Melos
         run: dart pub global activate melos '>=6.3.2 <9.0.0'
 
-      - name: Run Melos
-        run: melos bootstrap
+      # A pub workspace resolves at the root. melos 6's bootstrap would write
+      # pubspec_overrides.yaml for app -> auth -> core, which pub rejects in a workspace.
+      - name: Install dependencies
+        run: flutter pub get
 
       - name: Run Flutter Diff Action
         uses: ./
@@ -208,9 +210,115 @@ jobs:
           echo "outcome=$OUTCOME expected=$EXPECT"
           [ "$OUTCOME" = "$EXPECT" ]
 
+  # Monorepo selection and the Action's outputs, on a fresh repo made from
+  # example/super_app (core <- auth <- app; api is on its own).
+  test_outputs:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        flutter: ['3.27.0', stable]
+    name: Outputs - Flutter ${{ matrix.flutter }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v5
+        with:
+          path: action-src
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ matrix.flutter == 'stable' && 'any' || matrix.flutter }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install Melos
+        run: dart pub global activate melos '>=6.3.2 <9.0.0'
+
+      - name: Create fixture repo
+        id: fixture
+        run: |
+          cp -R action-src/example/super_app fixture
+          cd fixture
+          printf '.dart_tool/\nbuild/\ncoverage/\npubspec.lock\npubspec_overrides.yaml\n.flutter-plugins*\n' > .gitignore
+          git init -b main
+          git config user.name ci
+          git config user.email ci@example.com
+          git add -A
+          git commit -m init
+          git clone --bare . ../origin.git
+          git remote add origin ../origin.git
+          git fetch origin
+          flutter pub get
+          echo "main=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git checkout -b core
+          echo '// changed' >> feature/core/lib/core.dart
+          git commit -am 'change core'
+          git checkout -b root main
+          echo '# changed' >> pubspec.yaml
+          git commit -am 'change the workspace pubspec'
+          git checkout core
+
+      - name: Core change, melos
+        id: core
+        uses: ./action-src
+        with:
+          command: flutter test
+          use-melos: true
+          working-dir: fixture
+          branch: main
+          debug: true
+
+      - name: Core change, one package, compared with a commit
+        id: app
+        uses: ./action-src
+        with:
+          command: flutter test
+          working-dir: fixture/app/super_app
+          base: ${{ steps.fixture.outputs.main }}
+
+      - name: Core change, dry run of an unrelated package
+        id: api
+        uses: ./action-src
+        with:
+          working-dir: fixture/feature/api
+          branch: main
+
+      - name: Switch to the workspace change
+        run: git -C fixture checkout root
+
+      - name: Workspace change, melos
+        id: root
+        uses: ./action-src
+        with:
+          command: flutter analyze
+          use-melos: true
+          working-dir: fixture
+          branch: main
+
+      - name: Check outputs
+        env:
+          CORE: ${{ toJSON(steps.core.outputs) }}
+          APP: ${{ toJSON(steps.app.outputs) }}
+          API: ${{ toJSON(steps.api.outputs) }}
+          ROOT: ${{ toJSON(steps.root.outputs) }}
+        run: |
+          set -x
+          # The dependents of core run, api doesn't.
+          jq -e '.ran == "partial" and (.packages | fromjson | sort) == ["app/super_app", "feature/auth", "feature/core"]' <<< "$CORE"
+          jq -e '(."test-files" | fromjson | sort) == ["app/super_app/test/main_test.dart", "feature/auth/test/auth_test.dart", "feature/core/test/core_test.dart"]' <<< "$CORE"
+          jq -e '."changed-files" == "[\"feature/core/lib/core.dart\"]"' <<< "$CORE"
+          jq -e '.ran == "partial" and ."test-files" == "[\"app/super_app/test/main_test.dart\"]"' <<< "$APP"
+          jq -e '.ran == "none" and .skipped == "true" and .packages == "[]"' <<< "$API"
+          # The root pubspec.yaml is outside every package, yet all of them run.
+          jq -e '.ran == "full" and ."full-suite" == "true" and (.packages | fromjson | length) == 4' <<< "$ROOT"
+
   verify_tests:
     name: Verify All Tests
-    needs: [test_cli, test_simple_app, test_super_app, test_repo_root]
+    needs: [test_cli, test_simple_app, test_super_app, test_repo_root, test_outputs]
     runs-on: ubuntu-latest
     if: always()
     steps:

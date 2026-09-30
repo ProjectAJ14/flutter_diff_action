@@ -1,5 +1,5 @@
 name: dart_diff_cli
-description: Optimizes Flutter/Dart development workflows by running commands only on changed files, significantly speeding up CI/CD pipelines and local development.
+description: Runs Dart/Flutter tests, analysis and formatting only for what a change affects - the tests that import the changed code, affected packages, changed files.
 version: 0.1.0
 homepage: https://github.com/ProjectAJ14/flutter_diff_action
 documentation: https://github.com/ProjectAJ14/flutter_diff_action/tree/main/packages/dart_diff_cli

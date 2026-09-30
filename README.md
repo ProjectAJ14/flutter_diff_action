@@ -1,6 +1,6 @@
 <p align="center">
   <h1 align="center">Flutter Diff Action</h1>
-  <p align="center">Run Flutter/Dart commands on changed files with intelligence</p>
+  <p align="center">Run Dart/Flutter tests, analysis and formatting only for what a change affects</p>
 </p>
 
 <p align="center">
@@ -8,12 +8,13 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT"></a>
 </p>
 
-This project optimizes Flutter/Dart development workflows by running commands only on changed files, significantly speeding up CI/CD pipelines and local development.
+Runs `flutter test` on the tests that use the changed code, `flutter analyze` only in the packages a change reaches, and `dart format` on the changed files, in CI (GitHub Action) or locally (CLI).
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Project Components](#project-components)
+- [When not to use it](#when-not-to-use-it)
 - [GitHub Action](#github-action)
 - [How It Works](#how-it-works)
 - [Contributing](#contributing)
@@ -22,10 +23,10 @@ This project optimizes Flutter/Dart development workflows by running commands on
 
 Flutter Diff Action provides tools to make your development and CI workflows more efficient by focusing on what's changed:
 
-- ⚡ **Faster workflows**: Run commands only on files that have changed
-- 🧪 **Smarter testing**: Automatically find and run corresponding test files
-- 📦 **Mono-repo friendly**: Full support for Melos-based workspaces
-- 🛠️ **Flexible**: Works with testing, analysis, and formatting commands
+- 🧪 **Affected tests**: runs every test that imports a changed file, directly or through other files, across local packages
+- 📦 **Mono-repo friendly**: Melos and pub workspaces, including the packages that depend on a changed one
+- 🔁 **Pull requests and pushes**: compares with the PR base, the merge group base, or the commit before a push
+- 📤 **Outputs and summary**: what ran and why, as step outputs (JSON) and a job summary
 
 ## Project Components
 
@@ -36,108 +37,33 @@ This repository contains two complementary tools:
 
 Both tools intelligently identify changes, run commands only on affected files, and support mono-repo setups.
 
+## When not to use it
+
+A partial run is only as safe as the rules that pick it. Know these limits:
+
+- **Coverage gates.** A partial test run writes a partial `lcov.info`. Gate on coverage only when the `full-suite` output is `true`, or set `run-all: true` in the job that collects coverage.
+- **Tests that don't import what they test.** Tests are picked by following `import`, `export` and `part` directives. A test that reaches code another way (reflection, a generated registry, a file read at runtime) is not picked. List such inputs in `run-all-on`.
+- **Codegen.** A change to a model reaches the tests importing it. A generator that reads many libraries (e.g. a DI or router config) is not followed; add its inputs to `run-all-on`.
+- **Setup cost.** The Action compiles its CLI once per job (a few seconds, plus `dart pub get` for its dependencies). It pays off when the full suite takes clearly longer than that.
+
 ## GitHub Action
 
-The GitHub Action component lets you run Flutter commands only on changed files in your CI/CD workflows.
+The GitHub Action component runs your command only on what a change affects, in CI.
 
 ### Requirements
 
 - Flutter 3.27.0 or newer (Dart 3.6 or newer). CI tests the Action on Flutter 3.27.0 and the latest stable.
-- A checkout with enough history to find the merge base with the base branch, e.g. `fetch-depth: 0`.
-  With a shallow clone the Action falls back to diffing against the tip of the base branch.
-- For `use-melos: true`, Melos must be installed and bootstrapped before the Action runs.
+- Your dependencies installed (`flutter pub get`), so the Action can follow `package:` imports into your local packages.
+- A checkout with enough history to find the merge base, e.g. `fetch-depth: 0`. In a shallow clone the Action fetches more history (100, then 1000 commits); if it still finds no merge base, it warns and compares with the base itself, which also picks up what changed on the base.
+- For `use-melos: true`, Melos installed and the workspace set up: `melos bootstrap`, or for a pub workspace `dart pub get` at the root (Melos 6's bootstrap can't link workspace packages that depend on each other).
 
 ### Setup
 
 ```yaml
-steps:
-  - uses: actions/checkout@v5
-    with:
-      fetch-depth: 0
-  - uses: subosito/flutter-action@v2
-
-  - name: Run on changed files
-    uses: ProjectAJ14/flutter_diff_action@v2
-    with:
-      command: 'flutter test'
-      branch: ${{ github.base_ref }}
-```
-
-### Configuration Options
-
-| Parameter     | Description                         | Required | Default   |
-|---------------|-------------------------------------|----------|-----------|
-| `command`     | Command to execute on changed files | Yes      | -         |
-| `use-melos`   | Enable Melos support for mono-repos | No       | `false`   |
-| `working-dir` | Working directory for the command   | No       | `.`       |
-| `branch`      | Base branch for comparison          | No       | `main`    |
-| `remote`      | Remote repository name              | No       | `origin`  |
-| `debug`       | Show verbose output (`dart_diff --verbose`) | No       | `false`   |
-
-### Examples
-
-#### Basic Test Workflow
-
-```yaml
-- name: Test changed files
-  uses: ProjectAJ14/flutter_diff_action@v2
-  with:
-    command: 'flutter test'
-```
-
-#### With Analysis
-
-```yaml
-- name: Analyze & test changed files
-  uses: ProjectAJ14/flutter_diff_action@v2
-  with:
-    command: 'flutter analyze'
-    debug: true
-```
-
-#### For Mono-Repos
-
-```yaml
-- name: Setup Melos
-  run: dart pub global activate melos
-
-- name: Test changed packages
-  uses: ProjectAJ14/flutter_diff_action@v2
-  with:
-    command: 'flutter test'
-    use-melos: true
-```
-
-#### With Custom Base Branch
-
-```yaml
-- name: Test changed files
-  uses: ProjectAJ14/flutter_diff_action@v2
-  with:
-    command: 'flutter test'
-    branch: 'develop'
-```
-
-#### With Custom Remote
-
-```yaml
-- name: Test changed files
-  uses: ProjectAJ14/flutter_diff_action@v2
-  with:
-    command: 'flutter test'
-    remote: 'upstream'
-```
-
-## Common Workflows
-
-### CI/CD Pipeline
-
-```yaml
-name: Flutter CI
-
 on:
   pull_request:
-    branches: [ main ]
+  push:
+    branches: [main]
 
 jobs:
   test:
@@ -147,40 +73,175 @@ jobs:
         with:
           fetch-depth: 0
       - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.27.0'
+      - run: flutter pub get
 
-      - name: Setup Melos
-        run: |
-          dart pub global activate melos
-          melos bootstrap
-
-      - name: Run Tests
+      - name: Test what changed
         uses: ProjectAJ14/flutter_diff_action@v2
         with:
-          command: 'flutter test --no-pub --coverage'
-          branch: ${{ github.base_ref }}
-          use-melos: true
-          debug: true
+          command: 'flutter test'
+```
+
+With no `base` or `branch`, a pull request compares with its base branch, a merge queue with its base commit, and a push with the commit before the push. A new branch's first push runs everything; other events compare with `main`.
+
+For security-sensitive workflows, pin the Action to a full commit SHA instead of `@v2`, which moves with every v2 release: `uses: ProjectAJ14/flutter_diff_action@<sha> # v2.x.y`.
+
+### Configuration Options
+
+| Parameter            | Description | Default |
+|----------------------|-------------|---------|
+| `command`            | Command to run, e.g. `flutter test`. Empty: only set the outputs (see [fan out](#fan-out-a-matrix-per-package)). | `''` |
+| `mode`               | What to pass to the command: `test`, `files`, `package` or `auto` (see [How It Works](#how-it-works)). | `auto` |
+| `base`               | Commit or ref to compare with, e.g. `${{ github.event.before }}`. | from the event |
+| `branch`             | Base branch to compare with, as `<remote>/<branch>`. | from the event, else `main` |
+| `remote`             | Remote repository name. | `origin` |
+| `run-all`            | Run on everything, without looking at the changes. | `false` |
+| `run-all-on`         | Newline-separated globs, relative to the repository root. A changed file matching one runs everything. No spaces. | `''` |
+| `use-melos`          | Run in each changed Melos package. | `false` |
+| `include-dependents` | With `use-melos`, also run in the packages that depend on a changed package. | `true` |
+| `working-dir`        | Working directory for the command. | `.` |
+| `debug`              | Show verbose output (`dart_diff --verbose`). | `false` |
+
+`base`, `branch` and `remote` may only contain `A-Za-z0-9._/@+-` and can't start with `-`.
+
+### Outputs
+
+| Output          | Value |
+|-----------------|-------|
+| `ran`           | `none`, `partial` or `full`. With Melos, `full` only when every package looked at ran in full |
+| `full-suite`    | `true` when the command ran on everything |
+| `skipped`       | `true` when nothing ran |
+| `changed-files` | JSON array of the changed files |
+| `files`         | JSON array of the files passed to the command |
+| `test-files`    | JSON array of the test files passed to the command |
+| `packages`      | JSON array of the package directories where the command ran (or, without a `command`, would run) |
+
+Paths are relative to the repository root. The job summary shows the same, with the reason for each package.
+
+### Examples
+
+#### Analyze and format
+
+```yaml
+- name: Analyze affected packages
+  uses: ProjectAJ14/flutter_diff_action@v2
+  with:
+    command: 'flutter analyze --fatal-infos'
+
+- name: Check formatting of changed files
+  uses: ProjectAJ14/flutter_diff_action@v2
+  with:
+    command: 'dart format --set-exit-if-changed'
+```
+
+`analyze` runs on the whole package (mode `package`), because an error can show up in a file that uses the changed one. `dart format` gets only the changed files (mode `files`).
+
+#### Coverage gate on full runs
+
+```yaml
+- name: Test
+  id: test
+  uses: ProjectAJ14/flutter_diff_action@v2
+  with:
+    command: 'flutter test --coverage'
+    run-all-on: |
+      .github/workflows/**
+      tool/**
+
+- name: Check coverage
+  if: steps.test.outputs.full-suite == 'true'
+  run: ./tool/check_coverage.sh
+```
+
+#### For Mono-Repos
+
+```yaml
+- uses: actions/checkout@v5
+  with:
+    fetch-depth: 0
+- uses: subosito/flutter-action@v2
+
+- name: Set up Melos
+  run: |
+    dart pub global activate melos
+    melos bootstrap   # for a pub workspace, `dart pub get` at the root instead
+
+- name: Test changed packages and their dependents
+  uses: ProjectAJ14/flutter_diff_action@v2
+  with:
+    command: 'flutter test --no-pub'
+    use-melos: true
+```
+
+In each package, the tests that use a changed file, in that package or in a package it depends on, run. A change to a root file such as `pubspec.lock`, `pubspec.yaml`, `melos.yaml` or `analysis_options.yaml` runs every package in full.
+
+#### Fan out a matrix per package
+
+```yaml
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.diff.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+      - run: dart pub global activate melos && melos bootstrap
+      - id: diff
+        uses: ProjectAJ14/flutter_diff_action@v2
+        with:
+          use-melos: true   # no command: only work out the packages
+
+  test:
+    needs: changes
+    if: needs.changes.outputs.packages != '[]'
+    strategy:
+      matrix:
+        package: ${{ fromJSON(needs.changes.outputs.packages) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+      - run: flutter pub get
+        working-directory: ${{ matrix.package }}
+      - uses: ProjectAJ14/flutter_diff_action@v2
+        with:
+          command: 'flutter test'
+          working-dir: ${{ matrix.package }}
+```
+
+#### With a custom base
+
+```yaml
+- name: Test changes since develop
+  uses: ProjectAJ14/flutter_diff_action@v2
+  with:
+    command: 'flutter test'
+    branch: 'develop'
+    remote: 'upstream'
 ```
 
 ## How It Works
 
-1. Installs the `dart_diff` CLI from the Action's own checkout, so `@v2` (or any tag or SHA) always runs the CLI code of that same tag. Nothing is downloaded from pub.dev.
-2. Finds the files changed against the merge base with `<remote>/<branch>`, plus untracked files. Paths are limited to `working-dir`.
-3. Keeps the Dart files and runs the command on them. Long file lists are split over several runs to stay under the OS command-line limit; the Action fails if any run fails. A test command that would need several runs runs the full suite once instead, so coverage and the summary stay whole.
-4. For test commands (`flutter test`, `dart test`, `fvm flutter test`), each changed file is mapped to its test (`lib/a.dart` -> `test/a_test.dart`). The **full** test suite runs instead when a change can't be mapped to a test:
-   - `pubspec.yaml`, `pubspec.lock`, `dart_test.yaml`, `build.yaml` or `l10n.yaml` changed,
-   - a non-test file under `test/` changed (helpers, fixtures, goldens),
-   - a non-Dart file under `lib/` or `assets/` changed,
-   - a Dart file outside `test/` was deleted or renamed.
+1. Compiles the `dart_diff` CLI from the Action's own checkout, once per job, so `@v2` (or any tag or SHA) always runs the CLI code of that same tag. Nothing is downloaded from pub.dev except the CLI's dependencies.
+2. Finds the files changed against the merge base with the base, plus untracked files, across the repository.
+3. Picks what to run, by mode (`auto` picks `test` for `flutter test`, `dart test` and `fvm flutter test`, `package` for `flutter analyze` and `dart analyze`, `files` otherwise):
+   - **test**: every `test/**_test.dart` that imports, exports or includes as a part a changed file, directly or through other files, plus changed test files. Imports are followed into local packages (pub workspace members, path dependencies) with `.dart_tool/package_config.json`. A deleted file's importers are followed the same way. The **full** test suite runs instead when:
+     - `pubspec.yaml`, `pubspec.lock`, `pubspec_overrides.yaml`, `dart_test.yaml`, `build.yaml` or `l10n.yaml` changed,
+     - a root `pubspec.yaml`, `pubspec.lock`, `melos.yaml` or `analysis_options.yaml` in a parent directory changed (the workspace),
+     - `flutter_test_config.dart` changed, or a non-Dart file under `test/`, `lib/` or `assets/` (fixtures, goldens, l10n),
+     - a changed file matches `run-all-on`, `run-all` is set, or a new branch was pushed,
+     - the tests don't fit on one command line.
+   - **package**: the command runs, with no files, when a file in the package changed, a file it imports (in another local package) changed, or the workspace changed.
+   - **files**: the command runs on the changed Dart files in the package. Long lists are split over several runs to stay under the OS command-line limit; the Action fails if any run fails.
+4. The command's exit code is the step's exit code. The outputs and the job summary are written even when the command fails.
 
-   Changed files with no matching test file are skipped.
-5. The command's exit code is the step's exit code.
+With `use-melos: true` the Action runs `git fetch` once, then `melos exec --diff=<base> --include-dependents` runs `dart_diff exec --no-fetch` in each selected package. When a file at the Melos root changed, or `run-all-on` is set, `--diff` is dropped and `dart_diff` decides in every package.
 
-With `use-melos: true` the Action runs `git fetch` once, then `melos exec --diff=<remote>/<branch>` runs `dart_diff exec --no-fetch` in each changed package.
-
-Inputs are passed to the scripts through environment variables, never pasted into them. `branch` and `remote` may only contain `A-Za-z0-9._/@+-` and can't start with `-`. `command` keeps shell quoting (e.g. `flutter test --plain-name "login flow"`), since it is your own workflow's input; don't build it from untrusted text such as PR titles.
+Inputs are passed to the scripts through environment variables, never pasted into them. `command` keeps shell quoting (e.g. `flutter test --plain-name "login flow"`), since it is your own workflow's input; don't build it from untrusted text such as PR titles.
 
 ## Contributing
 

@@ -2,7 +2,7 @@
   <a href="https://pub.dev/packages/dart_diff_cli">
     <img src="https://github.com/user-attachments/assets/2f925259-f0e2-448e-937e-22331f916d89" alt="Nonstop Logo" height="252" />
   </a>
-  <p align="center">Optimizes Flutter/Dart development workflows by running commands only on changed files, significantly speeding up CI/CD pipelines and local development.</p>
+  <p align="center">Runs Dart/Flutter tests, analysis and formatting only for what a change affects.</p>
 </p>
 
 [![dart_diff_cli](https://img.shields.io/pub/v/dart_diff_cli.svg?label=dart_diff_cli&logo=dart&color=blue&style=for-the-badge)](https://pub.dev/packages/dart_diff_cli)
@@ -15,6 +15,7 @@ A command-line interface for running Flutter and Dart commands efficiently on ch
 - [Overview](#overview)
 - [Commands](#commands)
   - [exec](#exec)
+  - [report](#report)
   - [update](#update)
 - [Common Workflows](#common-workflows)
 - [Global Options](#global-options)
@@ -22,13 +23,13 @@ A command-line interface for running Flutter and Dart commands efficiently on ch
 
 ## Overview
 
-The `dart_diff_cli` tool optimizes your Flutter/Dart development workflow by running commands only on files that have changed. This significantly speeds up testing, analysis, and formatting during development by focusing only on the files that matter.
+`dart_diff` runs a command only for what changed compared with a base branch or commit: the tests that use the changed code, the packages it reaches, or the changed files.
 
 Key features include:
-- Running commands only on changed files
-- Automatically identifying corresponding test files
-- Supporting both standard projects and Melos-based mono-repos
-- Providing detailed logging for troubleshooting
+- Running every test that imports a changed file, directly or not, across local packages
+- Running `analyze` in a package only when it, or something it uses, changed
+- Supporting single packages, pub workspaces and Melos mono-repos
+- Recording each run for a summary (`report`), e.g. as GitHub Actions outputs
 
 
 
@@ -51,40 +52,51 @@ ddf exec [options] -- [command] [command-args]
 
 **Options:**
 
-| Option          | Alias | Description                           | Default  |
-|-----------------|-------|---------------------------------------|----------|
-| `--branch`      | `-b`  | Base branch for comparison            | `main`   |
-| `--remote`      | `-r`  | Remote repository name                | `origin` |
-| `--[no-]fetch`  |       | Run `git fetch <remote> <branch>` first | on     |
+| Option             | Alias | Description                                              | Default  |
+|--------------------|-------|----------------------------------------------------------|----------|
+| `--branch`         | `-b`  | Base branch for comparison                               | `main`   |
+| `--remote`         | `-r`  | Remote repository name                                   | `origin` |
+| `--base`           |       | Commit or ref to compare with, instead of `<remote>/<branch>` | -   |
+| `--[no-]fetch`     |       | Run `git fetch` for the base first                       | on       |
+| `--mode`           |       | `auto`, `test`, `files` or `package` (see below)         | `auto`   |
+| `--all`            |       | Run on everything, without looking at the changes        | off      |
+| `--run-all-on`     |       | Glob, relative to the repository root; a changed file matching it runs everything. Repeatable. | - |
+| `--report`         |       | Directory to write a JSON file about this run into (see [report](#report)) | - |
+| `--dry-run`        |       | Work out what would run without running it; the command is optional | off |
 
-`--branch` and `--remote` can't start with `-`.
+`--branch`, `--remote` and `--base` can't start with `-`.
 
-**How files are picked:**
+**What changed:** the files in `git diff <merge base>` plus untracked files, across the whole repository, where the merge base is that of `<remote>/<branch>` (or `--base`) and `HEAD`. The current directory must contain a `pubspec.yaml`.
 
-1. The changed files are those in `git diff --merge-base <remote>/<branch>` (or the diff against the branch tip when there is no merge base, e.g. in a shallow clone) plus untracked files. Paths are relative to, and limited to, the current directory, which must contain a `pubspec.yaml`.
-2. A failed `git fetch` only prints a warning and uses the local `<remote>/<branch>`. Use `--no-fetch` when the ref is already up to date, e.g. after fetching once for every package of a mono-repo.
-3. Only existing `.dart` files are passed to the command.
-4. For test commands (`flutter test`, `dart test`, `fvm flutter test`), each file is replaced by its test: `lib/src/a.dart` -> `test/src/a_test.dart`, other files -> a `_test.dart` sibling, `_test.dart` files as they are.
+- A failed `git fetch` only prints a warning and uses the local ref. Use `--no-fetch` when the ref is already up to date, e.g. after fetching once for every package of a mono-repo.
+- In a shallow clone with no merge base, 100 and then 1000 more commits are fetched. With still no merge base, it warns and diffs against the base itself, which also counts what changed on the base.
+- When `HEAD` is already part of the base (e.g. on `main` itself), it warns that only uncommitted changes count.
 
-**Full test suite:** for a test command, the command runs with no files (the whole suite) when:
+**What runs**, by mode. `auto` picks `test` for `flutter test`, `dart test` and `fvm flutter test`, `package` for `flutter analyze` and `dart analyze` (and when there is no command), `files` otherwise.
 
-- `pubspec.yaml`, `pubspec.lock`, `dart_test.yaml`, `build.yaml` or `l10n.yaml` at the project root changed,
-- a file under `test/` that isn't a `_test.dart` changed (helpers, fixtures, goldens),
-- a non-Dart file under `lib/` or `assets/` changed,
-- a Dart file that isn't a `_test.dart` was deleted or renamed.
+- `test`: the command gets every `test/**_test.dart` that imports, exports or includes as a `part` a changed file, directly or through other files, plus the changed test files themselves. `package:` imports are followed into local packages (workspace members, path dependencies) with `.dart_tool/package_config.json`, so a test is picked when a package it uses changed. Without a package config, only this package's own `package:` imports are followed. A deleted file's importers are picked the same way. The command runs with no files (the whole suite) when:
+  - `pubspec.yaml`, `pubspec.lock`, `pubspec_overrides.yaml`, `dart_test.yaml`, `build.yaml` or `l10n.yaml` changed,
+  - `pubspec.yaml`, `pubspec.lock`, `pubspec_overrides.yaml`, `melos.yaml` or `analysis_options.yaml` changed in a parent directory (the workspace root),
+  - `flutter_test_config.dart` changed, or a non-Dart file under `test/`, `lib/` or `assets/` (fixtures, goldens, l10n),
+  - a changed file matches `--run-all-on`, or `--all` is passed,
+  - the tests would need more than one command line (see below).
 
-Otherwise, a changed file with no matching test file is skipped, and nothing runs if no changed file has a test.
+  If no test uses the changes, nothing runs.
+- `package`: the command runs with no files when a file of the package changed, a file it imports from another local package changed, or the workspace config above changed. Otherwise nothing runs. Use it for `analyze`, whose errors can be in the files using a changed one.
+- `files`: the command gets the changed Dart files of the package (all of them with `--all` or a `--run-all-on` match).
 
 **Long file lists:** the files are split over several runs of the command so each command line stays under the OS limit (6000 characters on Windows, leaving room for what `flutter.bat` adds to cmd.exe's 8191 limit). Every run happens, even after a failure. A test command that would need several runs runs the full suite once instead, so coverage and the test summary stay whole.
 
 `exec` stops reading its own options at the first word of the command, so `--` is optional: `dart_diff exec -b develop flutter test --coverage` works too.
+
+When the `GITHUB_ACTIONS` environment variable is `true`, warnings are printed as GitHub Actions annotations.
 
 **Exit codes:**
 
 | Code | Meaning |
 |------|---------|
 | `0`  | The command succeeded, or there was nothing to run |
-| `1`  | No `pubspec.yaml`, no command given, not a git repository, or the diff failed |
+| `1`  | No `pubspec.yaml`, no command given, not a git repository, an unknown base, or the diff failed |
 | `64` | Invalid usage, e.g. an unknown option or a branch starting with `-` |
 | `69` | `git` or the command could not be started |
 | other | The command's own exit code (the first failing one when split over several runs) |
@@ -104,14 +116,17 @@ dart_diff exec -b develop -- flutter test
 dart_diff --verbose exec -- flutter test
 ```
 
-**Run analyzer on changed files**
+**Run the analyzer when the package is affected**
 
 ```bash
-# Run the analyzer on changed files
-dart_diff exec -- dart analyze
-
-# Run analyzer with specific options
+# Analyze the whole package if it, or a package it uses, changed
 dart_diff exec -- dart analyze --fatal-infos
+```
+
+**Compare with the commit before a push**
+
+```bash
+dart_diff exec --base "$BEFORE_SHA" -- flutter test
 ```
 
 **Format changed files**
@@ -123,6 +138,19 @@ dart_diff exec -- dart format
 # Format with specific options
 dart_diff exec -- dart format --set-exit-if-changed
 ```
+
+### report
+
+Sums up the runs that `exec --report <dir>` recorded (one per package in a mono-repo) as GitHub Actions outputs and a Markdown summary. The GitHub Action runs it after `exec`.
+
+```bash
+dart_diff report [--output <file>] [--summary <file>] <dir>
+```
+
+| Option      | Description |
+|-------------|-------------|
+| `--output`  | Append `key=value` outputs to this file, e.g. `$GITHUB_OUTPUT`: `ran` (`none`/`partial`/`full`), `full-suite`, `skipped`, and the JSON arrays `changed-files`, `files`, `test-files` and `packages` |
+| `--summary` | Append a Markdown summary to this file, e.g. `$GITHUB_STEP_SUMMARY` |
 
 ### update
 
@@ -155,7 +183,7 @@ dart_diff exec -- flutter test --coverage
 # Format only changed files
 dart_diff exec -- dart format --set-exit-if-changed
 
-# Analyze only changed files
+# Analyze, if anything the package uses changed
 dart_diff exec -- dart analyze
 
 # Run tests for changed files
@@ -197,9 +225,9 @@ For Windows:
 set PATH=%PATH%;%LOCALAPPDATA%\Pub\Cache\bin
 ```
 
-### No Modified Dart Files
+### Nothing to run
 
-If you see "No modified Dart files detected." and expect there to be changes, check:
+If you see "Nothing to run: ..." and expect there to be changes, check:
 
 - That you're using the correct base branch with `-b`
 - That you have uncommitted changes in your repository

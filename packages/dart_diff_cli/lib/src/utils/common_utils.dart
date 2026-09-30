@@ -28,41 +28,84 @@ bool isFlutterProjectRoot() {
   return File('pubspec.yaml').existsSync();
 }
 
-/// Calculates the path to the test file corresponding to a given source file.
-///
-/// `lib/src/foo.dart` maps to `test/src/foo_test.dart`; files outside `lib/`
-/// map to a `_test.dart` sibling.
-String calculateTestFile(String filePath) {
-  final testPath = filePath.startsWith('lib/')
-      ? filePath.replaceFirst('lib/', 'test/')
-      : filePath;
-  return '${testPath.substring(0, testPath.length - '.dart'.length)}'
-      '_test.dart';
+/// How `exec` picks what to pass to the command.
+enum Mode {
+  /// Pass the tests that depend on the changed files.
+  test,
+
+  /// Pass the changed Dart files.
+  files,
+
+  /// Run the command without files when the package, or a file it
+  /// depends on, changed.
+  package,
 }
 
-/// Whether [command] runs tests, e.g. `flutter test`, `dart test` or
-/// `fvm flutter test`. `dart analyze test` is not a test command.
-bool isTestCommand(List<String> command) {
-  final i = command.indexOf('test');
-  return i == 1 || (i == 2 && const ['flutter', 'dart'].contains(command[1]));
+/// Picks the [Mode] for [command]: [Mode.test] for `flutter test`,
+/// `dart test` or `fvm flutter test`, [Mode.package] for `analyze` (it must
+/// see the files using the changed ones), [Mode.files] otherwise.
+Mode detectMode(List<String> command) {
+  bool runs(String subcommand) {
+    final i = command.indexOf(subcommand);
+    return i == 1 || (i == 2 && const ['flutter', 'dart'].contains(command[1]));
+  }
+
+  if (runs('test')) return Mode.test;
+  if (runs('analyze')) return Mode.package;
+  return Mode.files;
 }
 
-/// Whether a change to [file] can break tests that the file-to-test mapping
-/// of [calculateTestFile] would not pick, so the whole suite must run.
+/// Whether a change to [file] can break tests without any test importing
+/// it, so the whole suite must run.
 ///
-/// That is: dependency, test, build or localization config, test helpers,
-/// fixtures and goldens, and non-Dart files under `lib/` or `assets/`.
+/// That is: dependency, test, build or localization config,
+/// `flutter_test_config.dart`, non-Dart files under `test/` (fixtures,
+/// goldens), and non-Dart files under `lib/` or `assets/`.
 bool affectsAllTests(String file) {
   return const [
         'pubspec.yaml',
         'pubspec.lock',
+        'pubspec_overrides.yaml',
         'dart_test.yaml',
         'build.yaml',
         'l10n.yaml',
       ].contains(file) ||
-      (file.startsWith('test/') && !file.endsWith('_test.dart')) ||
-      ((file.startsWith('lib/') || file.startsWith('assets/')) &&
+      file.endsWith('flutter_test_config.dart') ||
+      ((file.startsWith('test/') ||
+              file.startsWith('lib/') ||
+              file.startsWith('assets/')) &&
           !file.endsWith('.dart'));
+}
+
+/// Whether [file], a path relative to the package, is workspace-wide
+/// config in a parent directory: the root `pubspec.yaml`, `pubspec.lock`
+/// (shared by a pub workspace), `melos.yaml` or `analysis_options.yaml`.
+bool affectsWorkspace(String file) => RegExp(
+      r'^(\.\./)+(pubspec\.yaml|pubspec\.lock|pubspec_overrides\.yaml|'
+      r'melos\.yaml|analysis_options\.yaml)$',
+    ).hasMatch(file);
+
+/// Turns a glob into a [RegExp] matching whole paths: `*` and `?` stay
+/// within a directory, `**` crosses directories and `**/` matches zero or
+/// more of them.
+RegExp globToRegExp(String glob) {
+  final pattern = StringBuffer('^');
+  for (var i = 0; i < glob.length; i++) {
+    if (glob.startsWith('**/', i)) {
+      pattern.write('(.*/)?');
+      i += 2;
+    } else if (glob.startsWith('**', i)) {
+      pattern.write('.*');
+      i++;
+    } else if (glob[i] == '*') {
+      pattern.write('[^/]*');
+    } else if (glob[i] == '?') {
+      pattern.write('[^/]');
+    } else {
+      pattern.write(RegExp.escape(glob[i]));
+    }
+  }
+  return RegExp('$pattern\$');
 }
 
 /// Splits [files] into commands that start with [base], so that each

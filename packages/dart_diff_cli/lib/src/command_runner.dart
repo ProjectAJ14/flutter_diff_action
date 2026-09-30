@@ -10,8 +10,7 @@ import 'package:pub_updater/pub_updater.dart';
 
 const executableName = 'dart_diff';
 const packageName = 'dart_diff_cli';
-const description =
-    'Run Flutter/Dart commands with diff checking capabilities.';
+const description = 'Run Dart/Flutter commands only for what a change affects.';
 
 /// {@template dart_diff_cli_command_runner}
 /// A [CommandRunner] for the CLI.
@@ -44,7 +43,8 @@ class DartDiffCliCommandRunner extends CompletionCommandRunner<int> {
       );
 
     // Add sub commands
-    addCommand(ExecCommand(logger: _logger));
+    addCommand(ExecCommand(logger: _logger, environment: _environment));
+    addCommand(ReportCommand(logger: _logger));
     addCommand(UpdateCommand(logger: _logger, pubUpdater: _pubUpdater));
   }
 
