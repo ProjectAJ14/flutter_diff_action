@@ -379,6 +379,10 @@ jobs:
           git checkout -b root main
           echo '# changed' >> pubspec.yaml
           git commit -am 'change the workspace pubspec'
+          # A pull request's merge commit, as actions/checkout checks it out.
+          git checkout -b pr main
+          git merge --no-ff -m 'merge core' core
+          git push origin pr
           git checkout core
 
       - name: Core change, melos
@@ -406,6 +410,22 @@ jobs:
           working-dir: fixture/feature/api
           branch: main
 
+      # Depth 1, like actions/checkout: the Action must deepen it to find the merge base.
+      - name: Shallow clone of the merge commit
+        run: |
+          git clone --depth 1 -b pr "file://$PWD/origin.git" shallow
+          cd shallow
+          flutter pub get
+
+      - name: Core change, melos, shallow merge commit
+        id: shallow
+        uses: ./action-src
+        with:
+          command: flutter test
+          use-melos: true
+          working-dir: shallow
+          branch: main
+
       - name: Switch to the workspace change
         run: git -C fixture checkout root
 
@@ -424,6 +444,7 @@ jobs:
           APP: ${{ toJSON(steps.app.outputs) }}
           API: ${{ toJSON(steps.api.outputs) }}
           ROOT: ${{ toJSON(steps.root.outputs) }}
+          SHALLOW: ${{ toJSON(steps.shallow.outputs) }}
         run: |
           set -x
           # The dependents of core run, api doesn't.
@@ -432,6 +453,10 @@ jobs:
           jq -e '."changed-files" == "[\"feature/core/lib/core.dart\"]"' <<< "$CORE"
           jq -e '.ran == "partial" and ."test-files" == "[\"app/super_app/test/main_test.dart\"]"' <<< "$APP"
           jq -e '.ran == "none" and .skipped == "true" and .packages == "[]"' <<< "$API"
+          # The shallow clone was deepened just enough to find the merge base.
+          jq -e '.ran == "partial" and (.packages | fromjson | sort) == ["app/super_app", "feature/auth", "feature/core"]' <<< "$SHALLOW"
+          git -C shallow merge-base origin/main HEAD
+          [ "$(git -C shallow rev-parse --is-shallow-repository)" = true ]
           # The root pubspec.yaml is outside every package, yet all of them run.
           jq -e '.ran == "full" and ."full-suite" == "true" and (.packages | fromjson | length) == 4' <<< "$ROOT"
 
