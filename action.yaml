@@ -104,7 +104,10 @@ runs:
           awk '/^dev_dependencies:/ { skip = 1; next } /^[^ ]/ { skip = 0 } !skip' \
             "$src/pubspec.yaml" > "$dir/cli/pubspec.yaml"
           printf 'resolution:\n' > "$dir/cli/pubspec_overrides.yaml"
-          (cd "$dir/cli" && dart pub get && dart compile exe bin/dart_diff.dart -o "$exe")
+          # Pinned versions, resolved on the minimum Dart (3.6): a new release
+          # of a dependency can't change or break the Action.
+          cp "$src/tool/action.lock" "$dir/cli/pubspec.lock"
+          (cd "$dir/cli" && dart pub get --enforce-lockfile && dart compile exe bin/dart_diff.dart -o "$exe")
           echo "$GITHUB_ACTION_PATH" > "$dir/source"
         fi
         echo "$dir/bin" >> "$GITHUB_PATH"

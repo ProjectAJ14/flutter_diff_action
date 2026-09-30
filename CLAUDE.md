@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Two things that ship together:
 
-1. **GitHub Action** (`action.yaml`, composite), three steps: (a) `setup` copies the CLI's `bin/`, `lib/` and `pubspec.yaml` (minus `dev_dependencies`, stripped with `awk`) to `$RUNNER_TEMP/dart_diff`, writes `pubspec_overrides.yaml` with `resolution:` (so it resolves outside the root workspace), `dart pub get` + `dart compile exe`, adds it to `$GITHUB_PATH` (reused within a job for the same action path), and makes a report dir (`mktemp -d`); (b) the run step picks the base (`base` input, else `branch`, else `github.base_ref`, merge group base, push `github.event.before`; all-zero before → `--all`; else `main`), validates base/branch/remote (plain ref characters, no leading `-`) and `mode`, then runs `dart_diff [--verbose] exec --report <dir> ... -- <command>` (`eval`s `$DIFF_COMMAND` so shell quoting works); empty `command` → `--dry-run`. With `use-melos: true` it fetches (and deepens a shallow clone) once, then `melos exec --diff=<ref> [--include-dependents] -- dart_diff exec --no-fetch ...`; `--diff` is dropped when a root-level file changed or `run-all-on` is set, so `dart_diff` decides per package; (c) `report` (`if: always()`) runs `dart_diff report` into `$GITHUB_OUTPUT`/`$GITHUB_STEP_SUMMARY`, which feed the Action's outputs (`ran`, `full-suite`, `skipped`, `changed-files`, `files`, `test-files`, `packages`). All inputs reach the scripts through `env:`. `exec` uses `allowTrailingOptions: false`, because Melos 7 drops the `--` that `melos exec` passes on.
+1. **GitHub Action** (`action.yaml`, composite), three steps: (a) `setup` copies the CLI's `bin/`, `lib/` and `pubspec.yaml` (minus `dev_dependencies`, stripped with `awk`) to `$RUNNER_TEMP/dart_diff`, writes `pubspec_overrides.yaml` with `resolution:` (so it resolves outside the root workspace), copies the pinned `tool/action.lock` in as `pubspec.lock`, `dart pub get --enforce-lockfile` + `dart compile exe`, adds it to `$GITHUB_PATH` (reused within a job for the same action path), and makes a report dir (`mktemp -d`); (b) the run step picks the base (`base` input, else `branch`, else `github.base_ref`, merge group base, push `github.event.before`; all-zero before → `--all`; else `main`), validates base/branch/remote (plain ref characters, no leading `-`) and `mode`, then runs `dart_diff [--verbose] exec --report <dir> ... -- <command>` (`eval`s `$DIFF_COMMAND` so shell quoting works); empty `command` → `--dry-run`. With `use-melos: true` it fetches (and deepens a shallow clone) once, then `melos exec --diff=<ref> [--include-dependents] -- dart_diff exec --no-fetch ...`; `--diff` is dropped when a root-level file changed or `run-all-on` is set, so `dart_diff` decides per package; (c) `report` (`if: always()`) runs `dart_diff report` into `$GITHUB_OUTPUT`/`$GITHUB_STEP_SUMMARY`, which feed the Action's outputs (`ran`, `full-suite`, `skipped`, `changed-files`, `files`, `test-files`, `packages`). All inputs reach the scripts through `env:`. `exec` uses `allowTrailingOptions: false`, because Melos 7 drops the `--` that `melos exec` passes on.
 2. **Dart CLI** (`packages/dart_diff_cli`, published to pub.dev as `dart_diff_cli`; executables `dart_diff` and alias `ddf`).
 
 The Action runs the CLI source of the same tag/SHA, so CLI changes are tested by the Action's CI right away. pub.dev is only for people installing the CLI themselves.
@@ -48,6 +48,17 @@ The `version-verify` tag (`test/ensure_build_test.dart`) is skipped by default i
 - The update check against pub.dev is skipped when the `CI` env var is set. Tests inject `environment: {}` so CI doesn't change their behavior.
 - The package has its own `analysis_options.yaml` (`package:lints`). The root one also uses `package:lints` and excludes `example/**`.
 - `utils/constants.dart`: the `Options` enum holds the CLI option names, abbreviations and defaults (`branch`/`b`/`main`, `remote`/`r`/`origin`).
+
+### Action lockfile
+
+`tool/action.lock` pins the CLI's dependencies for the Action. It is the `pubspec.lock` of the standalone copy the setup step builds, resolved on Dart **3.6.0** (the minimum), so every supported SDK can use it. After changing `dependencies` in the CLI's `pubspec.yaml`, regenerate it with Dart 3.6.0, or the Action's setup fails (`--enforce-lockfile`) in every example job:
+
+```bash
+cd packages/dart_diff_cli && tmp=$(mktemp -d) && cp -R bin lib "$tmp/" \
+  && awk '/^dev_dependencies:/ { skip = 1; next } /^[^ ]/ { skip = 0 } !skip' pubspec.yaml > "$tmp/pubspec.yaml" \
+  && printf 'resolution:\n' > "$tmp/pubspec_overrides.yaml" \
+  && (cd "$tmp" && dart pub get) && cp "$tmp/pubspec.lock" tool/action.lock
+```
 
 ### Version file
 
