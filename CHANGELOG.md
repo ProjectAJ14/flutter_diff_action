@@ -1,3 +1,11 @@
+# [2.1.0](https://github.com/ProjectAJ14/flutter_diff_action/compare/v2.0.0...v2.1.0) (2026-09-30)
+
+
+### Features
+
+* base per event, melos dependents, outputs and job summary ([600c7e7](https://github.com/ProjectAJ14/flutter_diff_action/commit/600c7e728e4a89e217de6887af0e8239d0e1379c)), closes [#25](https://github.com/ProjectAJ14/flutter_diff_action/issues/25) [#26](https://github.com/ProjectAJ14/flutter_diff_action/issues/26)
+* **cli:** pick tests through the import graph, add modes, base and reports ([f64008f](https://github.com/ProjectAJ14/flutter_diff_action/commit/f64008f28a2cb4015fc9c7199fac34dff238acf6)), closes [#25](https://github.com/ProjectAJ14/flutter_diff_action/issues/25) [#26](https://github.com/ProjectAJ14/flutter_diff_action/issues/26)
+
 # [2.0.0](https://github.com/ProjectAJ14/flutter_diff_action/compare/v1.0.1...v2.0.0) (2026-09-30)
 
 
