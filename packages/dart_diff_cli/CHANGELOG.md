@@ -1,3 +1,10 @@
+## 0.1.0
+
+> Note: This release has breaking changes.
+
+ - **FIX**(dart_diff_cli): parse exec options only before the command.
+ - **BREAKING** **FEAT**(dart_diff_cli): fix diff detection, stream output, propagate exit codes.
+
 ## 0.0.4
 
  - **FEAT**: add SVG icon for Dart Diff CLI and update README with logo.
