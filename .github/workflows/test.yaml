@@ -5,6 +5,11 @@ on:
     branches:
       - main
 
+# A new push to the pull request cancels the run for the previous one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test_cli:
     runs-on: ${{ matrix.os }}
@@ -49,6 +54,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.sdk == 'stable'
         run: bash tool/coverage.sh
 
+  # One job per Flutter version, one step per command: Flutter is set up and
+  # the CLI compiled once. Each step runs even after one fails (!cancelled()).
+  # A pull request rarely changes the example, so a diff-based step usually
+  # runs nothing; the run-all steps run the command for real.
   test_simple_app:
     runs-on: ubuntu-latest
     strategy:
@@ -56,15 +65,7 @@ jobs:
       matrix:
         # 3.27.0 is the minimum supported Flutter (Dart 3.6); 'stable' is the latest release ('any' to flutter-action).
         flutter: ['3.27.0', stable]
-        command:
-          - 'flutter test --no-pub --coverage'
-          - 'flutter test'
-          - 'flutter test --plain-name "Counter increments"'
-          - 'flutter analyze --fatal-infos'
-          - 'flutter analyze'
-          - 'dart format --set-exit-if-changed'
-          - 'dart format'
-    name: Simple App - Flutter ${{ matrix.flutter }} - ${{ matrix.command }}
+    name: Simple App - Flutter ${{ matrix.flutter }}
     defaults:
       run:
         working-directory: 'example/simple_app'
@@ -84,13 +85,81 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Run Flutter Diff Action
+      - name: flutter test
+        if: ${{ !cancelled() }}
         uses: ./
         with:
           branch: ${{ github.base_ref }}
-          command: ${{ matrix.command }}
+          command: flutter test
           working-dir: 'example/simple_app'
           use-melos: false
+          run-all: false
+          debug: true
+
+      - name: flutter test --no-pub --coverage (all)
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          branch: ${{ github.base_ref }}
+          command: flutter test --no-pub --coverage
+          working-dir: 'example/simple_app'
+          use-melos: false
+          run-all: true
+          debug: true
+
+      - name: flutter test --plain-name "Counter increments" (all)
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          branch: ${{ github.base_ref }}
+          command: 'flutter test --plain-name "Counter increments"'
+          working-dir: 'example/simple_app'
+          use-melos: false
+          run-all: true
+          debug: true
+
+      - name: flutter analyze
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          branch: ${{ github.base_ref }}
+          command: flutter analyze
+          working-dir: 'example/simple_app'
+          use-melos: false
+          run-all: false
+          debug: true
+
+      - name: flutter analyze --fatal-infos (all)
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          branch: ${{ github.base_ref }}
+          command: flutter analyze --fatal-infos
+          working-dir: 'example/simple_app'
+          use-melos: false
+          run-all: true
+          debug: true
+
+      - name: dart format
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          branch: ${{ github.base_ref }}
+          command: dart format
+          working-dir: 'example/simple_app'
+          use-melos: false
+          run-all: false
+          debug: true
+
+      - name: dart format --set-exit-if-changed (all)
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          branch: ${{ github.base_ref }}
+          command: dart format --set-exit-if-changed
+          working-dir: 'example/simple_app'
+          use-melos: false
+          run-all: true
           debug: true
 
   test_super_app:
@@ -100,14 +169,7 @@ jobs:
       matrix:
         # 3.27.0 is the minimum supported Flutter (Dart 3.6); 'stable' is the latest release ('any' to flutter-action).
         flutter: ['3.27.0', stable]
-        command:
-          - 'flutter test --no-pub --coverage'
-          - 'flutter test'
-          - 'flutter analyze --fatal-infos'
-          - 'flutter analyze'
-          - 'dart format --set-exit-if-changed'
-          - 'dart format'
-    name: Super App - Flutter ${{ matrix.flutter }} - ${{ matrix.command }}
+    name: Super App - Flutter ${{ matrix.flutter }}
     defaults:
       run:
         working-directory: 'example/super_app'
@@ -134,13 +196,70 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Run Flutter Diff Action
+      - name: flutter test
+        if: ${{ !cancelled() }}
         uses: ./
         with:
           branch: ${{ github.base_ref }}
-          command: ${{ matrix.command }}
+          command: flutter test
           working-dir: 'example/super_app'
           use-melos: true
+          run-all: false
+          debug: true
+
+      - name: flutter test --no-pub --coverage (all)
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          branch: ${{ github.base_ref }}
+          command: flutter test --no-pub --coverage
+          working-dir: 'example/super_app'
+          use-melos: true
+          run-all: true
+          debug: true
+
+      - name: flutter analyze
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          branch: ${{ github.base_ref }}
+          command: flutter analyze
+          working-dir: 'example/super_app'
+          use-melos: true
+          run-all: false
+          debug: true
+
+      - name: flutter analyze --fatal-infos (all)
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          branch: ${{ github.base_ref }}
+          command: flutter analyze --fatal-infos
+          working-dir: 'example/super_app'
+          use-melos: true
+          run-all: true
+          debug: true
+
+      - name: dart format
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          branch: ${{ github.base_ref }}
+          command: dart format
+          working-dir: 'example/super_app'
+          use-melos: true
+          run-all: false
+          debug: true
+
+      - name: dart format --set-exit-if-changed (all)
+        if: ${{ !cancelled() }}
+        uses: ./
+        with:
+          branch: ${{ github.base_ref }}
+          command: dart format --set-exit-if-changed
+          working-dir: 'example/super_app'
+          use-melos: true
+          run-all: true
           debug: true
 
   # The project is the git repo root, and the Action's exit code follows the command's.
