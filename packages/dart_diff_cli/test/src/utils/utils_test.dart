@@ -228,8 +228,12 @@ void main() {
 
     test('returns null outside a git repository', () {
       final dir = Directory.systemTemp.createTempSync('dart_diff_no_git');
-      addTearDown(() => dir.deleteSync(recursive: true));
       Directory.current = dir;
+      // Windows can't delete the current directory, so leave it first.
+      addTearDown(() {
+        Directory.current = originalCwd;
+        dir.deleteSync(recursive: true);
+      });
 
       expect(getModifiedFiles('origin', 'main', logger: logger), isNull);
       verify(() => logger.err('Error: Not a git repository.')).called(1);
