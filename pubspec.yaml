@@ -24,7 +24,7 @@ melos:
       updateGitTagRefs: false
       linkToCommits: false
       hooks:
-        post: melos run update_cli_version
+        preCommit: melos run update_cli_version
 
   scripts:
     lint: dart format --set-exit-if-changed packages tools && dart analyze --fatal-infos
