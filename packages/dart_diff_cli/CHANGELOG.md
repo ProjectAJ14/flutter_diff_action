@@ -1,3 +1,7 @@
+## 0.1.2+2
+
+ - **DOCS**: refresh shared Dart Diff icon.
+
 ## 0.1.2+1
 
  - **FIX**(action): pin the CLI's dependencies with a lockfile.
