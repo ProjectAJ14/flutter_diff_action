@@ -1,6 +1,6 @@
 name: 📦 Publish to pub.dev
 
-# Dispatched on the tag by semantic-release.yaml; a tag pushed by hand also works.
+# Triggered by the tag semantic-release.yaml pushes; dispatch on a tag to retry.
 on:
   push:
     tags: ['dart_diff_cli-v[0-9]*']
