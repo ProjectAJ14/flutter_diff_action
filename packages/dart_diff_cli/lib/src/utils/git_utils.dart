@@ -1,91 +1,70 @@
 import 'dart:io';
 
-import 'package:dart_diff_cli/src/utils/common_utils.dart';
 import 'package:mason_logger/mason_logger.dart';
 
-/// Gets the root directory of the git repository.
-String getGitRepoRoot({required Logger logger}) {
-  final result = Process.runSync('git', ['rev-parse', '--show-toplevel']);
-  if (result.exitCode != 0) {
-    logger.err('Error getting git repo root: ${result.stderr}');
-    exit(1);
-  }
-  final path = result.stdout.toString().trim();
-  logger.detail('Git repo root: $path');
-  return path;
-}
-
-/// Gets the path relative to the git repository root.
+/// Gets the files changed between the current working tree and
+/// [remote]/[branch], plus untracked files.
 ///
-/// Returns the path of the current directory relative to the git
-/// repository root.
-String getRelativeBasePath({required Logger logger}) {
-  final basePath = Directory.current.path.withUnixPath();
-  final repoRoot = getGitRepoRoot(logger: logger);
-  final relativeBasePath = basePath.withoutBasePath(repoRoot);
-  logger.detail('Current directory: $basePath\n'
-      'Repository root: $repoRoot\n'
-      'Relative base path: $relativeBasePath');
-  return relativeBasePath;
-}
-
-/// Gets the list of modified files between current branch and target branch.
+/// Deleted files are included, and a rename is reported as a deletion plus
+/// an addition, so callers can tell when a file other files import is gone.
 ///
-/// [remote] specifies the git remote (e.g., 'origin')
-/// [branch] specifies the target branch (e.g., 'main')
+/// Paths are relative to, and limited to, the current directory, so this
+/// works both at the repository root and inside a mono-repo package.
 ///
-/// Returns a list of modified file paths.
-List<String> getModifiedFiles(
+/// The diff is taken against the merge base, so commits that landed on
+/// [remote]/[branch] after this branch was created are not reported.
+///
+/// Runs `git fetch` first unless [fetch] is false. Returns null, after
+/// logging the error, when the files can't be determined.
+List<String>? getModifiedFiles(
   String remote,
   String branch, {
   required Logger logger,
+  bool fetch = true,
 }) {
-  if (!_isGitInstalled()) {
-    logger.err('Error: Git is not installed or not found in PATH.');
-    exit(1);
-  }
-  if (!_isGitRepository()) {
+  if (_git(['rev-parse', '--is-inside-work-tree']).exitCode != 0) {
     logger.err('Error: Not a git repository.');
-    exit(1);
+    return null;
   }
 
-  logger.detail('Fetching remote branch: $remote/$branch');
+  final target = '$remote/$branch';
 
-  runCommand(
-    ['git', 'fetch', remote, branch],
-    logger: logger,
-  );
+  if (fetch) {
+    logger.detail('Fetching remote branch: $target');
+    final result = _git(['fetch', remote, branch]);
+    if (result.exitCode != 0) {
+      logger.warn(
+        'Could not fetch $target, using the local ref. ${result.stderr}',
+      );
+    }
+  }
 
-  logger.detail('Getting modified files between HEAD and $remote/$branch');
+  const diffArgs = ['diff', '--name-only', '--no-renames', '--relative'];
+  var diff = _git([...diffArgs, '--merge-base', target]);
+  if (diff.exitCode != 0) {
+    // No merge base, e.g. in a shallow clone: fall back to the branch tip.
+    logger.detail('Merge base diff failed: ${diff.stderr}');
+    diff = _git([...diffArgs, target]);
+  }
+  if (diff.exitCode != 0) {
+    logger.err('Error running git diff against $target: ${diff.stderr}');
+    return null;
+  }
 
-  final result = runCommand(
-    [
-      'git',
-      'diff',
-      '--name-only',
-      '--diff-filter=ACMRT',
-      '$remote/$branch',
-    ],
-    logger: logger,
-  );
-  final files =
-      result.split('\n').where((line) => line.trim().isNotEmpty).toList();
+  final untracked = _git(['ls-files', '--others', '--exclude-standard']);
+
+  final files = {
+    ..._lines(diff.stdout),
+    if (untracked.exitCode == 0) ..._lines(untracked.stdout),
+  }.toList();
   logger.detail('Found ${files.length} modified files');
   return files;
 }
 
-/// Checks if git is installed on the system.
-bool _isGitInstalled() {
-  try {
-    final result = Process.runSync('git', ['--version']);
-    return result.exitCode == 0;
-  } catch (e) {
-    return false;
-  }
-}
+ProcessResult _git(List<String> args) => Process.runSync('git', args);
 
-/// Checks if the current directory is part of a git repository.
-bool _isGitRepository() {
-  final result = Process.runSync('git', ['rev-parse', '--is-inside-work-tree']);
-  return result.exitCode == 0 && result.stdout.toString().trim() == 'true';
-}
+Iterable<String> _lines(Object? output) => output
+    .toString()
+    .split('\n')
+    .map((line) => line.trim())
+    .where((line) => line.isNotEmpty);

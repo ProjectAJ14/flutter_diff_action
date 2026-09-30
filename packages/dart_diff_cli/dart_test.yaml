@@ -1,3 +1,7 @@
+# Some tests change Directory.current, which is shared by every test file
+# running in this process, so run the files one at a time.
+concurrency: 1
+
 tags:
   version-verify:
     skip: "Should only be run during pull request. Verifies if version file is updated."
