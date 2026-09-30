@@ -1,3 +1,16 @@
+# [2.2.0](https://github.com/ProjectAJ14/flutter_diff_action/compare/v2.1.0...v2.2.0) (2026-09-30)
+
+
+### Features
+
+* **cli:** report a full run when every test is selected ([47a7b69](https://github.com/ProjectAJ14/flutter_diff_action/commit/47a7b692e44af84c894912657e02bd827858deed))
+
+
+### Performance Improvements
+
+* **action:** resolve the CLI without its dev dependencies ([71695ed](https://github.com/ProjectAJ14/flutter_diff_action/commit/71695ed582c6990aeb9c32c1249e951ce25dab5a))
+* deepen a shallow clone by 1 before 100 commits ([cfd064a](https://github.com/ProjectAJ14/flutter_diff_action/commit/cfd064a30986ed5da3e29e9377d8f4922e1f3aa4))
+
 # [2.1.0](https://github.com/ProjectAJ14/flutter_diff_action/compare/v2.0.0...v2.1.0) (2026-09-30)
 
 
