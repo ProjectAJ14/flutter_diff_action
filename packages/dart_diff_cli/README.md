@@ -69,7 +69,7 @@ ddf exec [options] -- [command] [command-args]
 **What changed:** the files in `git diff <merge base>` plus untracked files, across the whole repository, where the merge base is that of `<remote>/<branch>` (or `--base`) and `HEAD`. The current directory must contain a `pubspec.yaml`.
 
 - A failed `git fetch` only prints a warning and uses the local ref. Use `--no-fetch` when the ref is already up to date, e.g. after fetching once for every package of a mono-repo.
-- In a shallow clone with no merge base, 100 and then 1000 more commits are fetched. With still no merge base, it warns and diffs against the base itself, which also counts what changed on the base.
+- In a shallow clone with no merge base, the history is deepened by 1 (enough for a pull request's merge commit), then 100, then 1000 commits. With still no merge base, it warns and diffs against the base itself, which also counts what changed on the base.
 - When `HEAD` is already part of the base (e.g. on `main` itself), it warns that only uncommitted changes count.
 
 **What runs**, by mode. `auto` picks `test` for `flutter test`, `dart test` and `fvm flutter test`, `package` for `flutter analyze` and `dart analyze` (and when there is no command), `files` otherwise.
@@ -79,6 +79,7 @@ ddf exec [options] -- [command] [command-args]
   - `pubspec.yaml`, `pubspec.lock`, `pubspec_overrides.yaml`, `melos.yaml` or `analysis_options.yaml` changed in a parent directory (the workspace root),
   - `flutter_test_config.dart` changed, or a non-Dart file under `test/`, `lib/` or `assets/` (fixtures, goldens, l10n),
   - a changed file matches `--run-all-on`, or `--all` is passed,
+  - every `test/**_test.dart` is picked anyway (reported as a full run),
   - the tests would need more than one command line (see below).
 
   If no test uses the changes, nothing runs.

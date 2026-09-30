@@ -54,7 +54,7 @@ The GitHub Action component runs your command only on what a change affects, in 
 
 - Flutter 3.27.0 or newer (Dart 3.6 or newer). CI tests the Action on Flutter 3.27.0 and the latest stable.
 - Your dependencies installed (`flutter pub get`), so the Action can follow `package:` imports into your local packages.
-- A checkout with enough history to find the merge base, e.g. `fetch-depth: 0`. In a shallow clone the Action fetches more history (100, then 1000 commits); if it still finds no merge base, it warns and compares with the base itself, which also picks up what changed on the base.
+- A checkout with enough history to find the merge base, e.g. `fetch-depth: 0`. In a shallow clone the Action fetches more history (1 commit, which is enough for a pull request's merge commit, then 100, then 1000); if it still finds no merge base, it warns and compares with the base itself, which also picks up what changed on the base.
 - For `use-melos: true`, Melos installed and the workspace set up: `melos bootstrap`, or for a pub workspace `dart pub get` at the root (Melos 6's bootstrap can't link workspace packages that depend on each other).
 
 ### Setup
@@ -234,6 +234,7 @@ jobs:
      - a root `pubspec.yaml`, `pubspec.lock`, `melos.yaml` or `analysis_options.yaml` in a parent directory changed (the workspace),
      - `flutter_test_config.dart` changed, or a non-Dart file under `test/`, `lib/` or `assets/` (fixtures, goldens, l10n),
      - a changed file matches `run-all-on`, `run-all` is set, or a new branch was pushed,
+     - every test is picked anyway (so `full-suite` is `true`),
      - the tests don't fit on one command line.
    - **package**: the command runs, with no files, when a file in the package changed, a file it imports (in another local package) changed, or the workspace changed.
    - **files**: the command runs on the changed Dart files in the package. Long lists are split over several runs to stay under the OS command-line limit; the Action fails if any run fails.

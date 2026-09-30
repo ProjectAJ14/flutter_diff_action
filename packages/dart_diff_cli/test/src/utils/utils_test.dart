@@ -316,11 +316,63 @@ void main() {
         ),
         ['lib/a.dart'],
       );
+      verifyInOrder([
+        () => logger.detail(
+              'No merge base with origin/main, deepening the history by 1',
+            ),
+        () => logger.detail(
+              'No merge base with origin/main, deepening the history by 100',
+            ),
+      ]);
+      verifyNever(() => logger.warn(any()));
+    });
+
+    test('deepens a shallow pull request merge commit by 1', () {
+      // Like actions/checkout on a pull request: HEAD is the merge commit,
+      // whose first parent is the base.
+      repo
+        ..git(['checkout', '-qb', 'feature'])
+        ..write('lib/a.dart', 'void a2() {}')
+        ..git(['commit', '-qam', 'feature'])
+        ..git(['checkout', '-q', 'main'])
+        ..write('packages/pkg/lib/b.dart', 'void b2() {}')
+        ..git(['commit', '-qam', 'main'])
+        ..git(['push', '-q', 'origin', 'main'])
+        ..git(['checkout', '-qb', 'merge'])
+        ..git(['merge', '-q', '--no-ff', '-m', 'merge', 'feature'])
+        ..git(['push', '-q', 'origin', 'merge']);
+      final clone = '${repo.dir.parent.path}/clone';
+      const main = '+refs/heads/main:refs/remotes/origin/main';
+      final origin = Uri.directory('${repo.dir.parent.path}/origin');
+      expect(
+        Process.runSync(
+          'git',
+          ['clone', '-q', '--depth', '1', '-b', 'merge', '$origin', clone],
+        ).exitCode,
+        0,
+      );
+      Directory.current = Directory(clone);
+
+      expect(
+        paths(
+          getModifiedFiles(
+            'origin/main',
+            logger: logger,
+            fetch: ['origin', main],
+          ),
+        ),
+        ['lib/a.dart'],
+      );
       verify(
         () => logger.detail(
-          'No merge base with origin/main, fetching 100 more commits',
+          'No merge base with origin/main, deepening the history by 1',
         ),
       ).called(1);
+      verifyNever(
+        () => logger.detail(
+          'No merge base with origin/main, deepening the history by 100',
+        ),
+      );
       verifyNever(() => logger.warn(any()));
     });
 

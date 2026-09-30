@@ -48,8 +48,9 @@ List<ChangedFile>? getModifiedFiles(
   }
 
   var mergeBase = _mergeBase(base);
-  // A shallow clone may not reach the merge base yet.
-  for (final depth in const [100, 1000]) {
+  // A shallow clone may not reach the merge base yet. A pull request's merge
+  // commit needs only 1: its first parent is the base.
+  for (final depth in const [1, 100, 1000]) {
     if (mergeBase != null ||
         fetch == null ||
         _git(['rev-parse', '--is-shallow-repository'])
@@ -59,7 +60,7 @@ List<ChangedFile>? getModifiedFiles(
             'true') {
       break;
     }
-    logger.detail('No merge base with $base, fetching $depth more commits');
+    logger.detail('No merge base with $base, deepening the history by $depth');
     // Deepen the base and HEAD one at a time: in one fetch, git deepens
     // only one of them.
     _git(['fetch', '--deepen=$depth', ...fetch]);
