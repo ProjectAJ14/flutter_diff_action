@@ -1,3 +1,35 @@
+# [2.0.0](https://github.com/ProjectAJ14/flutter_diff_action/compare/v1.0.1...v2.0.0) (2026-09-30)
+
+
+* feat!: install the CLI from the action's own checkout ([4359df1](https://github.com/ProjectAJ14/flutter_diff_action/commit/4359df1e295ceb5f74ac784c2a8c937064818e2b))
+* feat(dart_diff_cli)!: fix diff detection, stream output, propagate exit codes ([9d93230](https://github.com/ProjectAJ14/flutter_diff_action/commit/9d93230e4c8f51dfbee4661178d190fa42bc78d4))
+
+
+### Bug Fixes
+
+* correct logger success message placement in update_cli_version.dart ([eefb01e](https://github.com/ProjectAJ14/flutter_diff_action/commit/eefb01e1668e01e797ea3c5bcf75eab91baee805))
+* **dart_diff_cli:** parse exec options only before the command ([d19f19a](https://github.com/ProjectAJ14/flutter_diff_action/commit/d19f19a7d3219b78deb13ba0a79d3e4c25c0fee1))
+* keep shell quoting in the action command input ([37f3426](https://github.com/ProjectAJ14/flutter_diff_action/commit/37f34269023ffc02f347fee826745b2c5b2f4862))
+* run the version hook without a global melos ([73a7c56](https://github.com/ProjectAJ14/flutter_diff_action/commit/73a7c567ad3a8348c589f5c24d4cf46bfbb251d1))
+* sync version.dart before melos tags the release ([441cbd6](https://github.com/ProjectAJ14/flutter_diff_action/commit/441cbd6e3279479724859b68613413a64fd15223))
+
+
+### Features
+
+* add SVG icon for Dart Diff CLI and update README with logo ([65c5442](https://github.com/ProjectAJ14/flutter_diff_action/commit/65c544223c1fe776ea53215876c0565a9aebf586))
+
+
+### BREAKING CHANGES
+
+* failing commands now fail the step, and the CLI is no
+longer installed from pub.dev.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+* exec now exits with the wrapped command's exit code and
+diffs against the merge base instead of the base branch tip.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
 ## [1.0.1](https://github.com/ProjectAJ14/flutter_diff_action/compare/v1.0.0...v1.0.1) (2025-02-28)
 
 
