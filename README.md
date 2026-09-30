@@ -1,4 +1,10 @@
 <p align="center">
+  <a href="https://pub.dev/packages/dart_diff_cli">
+    <img src="packages/dart_diff_cli/images/dart-diff-cli-icon-v2.svg" alt="Dart Diff CLI icon" width="128" height="128" />
+  </a>
+</p>
+
+<p align="center">
   <h1 align="center">Flutter Diff Action</h1>
   <p align="center">Run Dart/Flutter tests, analysis and formatting only for what a change affects</p>
 </p>

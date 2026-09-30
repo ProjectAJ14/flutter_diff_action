@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Dart Diff CLI</title>
+  <desc id="desc">A blue terminal chevron alongside a minus and plus symbol, representing commands run on changed files.</desc>
+  <defs>
+    <linearGradient id="background" x1="96" y1="48" x2="928" y2="976" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#142B43"/>
+      <stop offset="1" stop-color="#081522"/>
+    </linearGradient>
+    <linearGradient id="chevron" x1="224" y1="288" x2="568" y2="736" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#59DCFF"/>
+      <stop offset="1" stop-color="#1688E8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#background)"/>
+  <rect x="32" y="32" width="960" height="960" rx="196" stroke="#86CFFF" stroke-opacity=".12" stroke-width="4"/>
+  <path d="M224 288H376L600 512L376 736H224L448 512L224 288Z" fill="url(#chevron)"/>
+  <path d="M224 288H376L448 360H296L224 288Z" fill="#AAEEFF" fill-opacity=".45"/>
+  <rect x="632" y="352" width="176" height="56" rx="16" fill="#FF9E9E"/>
+  <path d="M720 552V696M648 624H792" stroke="#5CE2BC" stroke-width="56" stroke-linecap="round"/>
+</svg>

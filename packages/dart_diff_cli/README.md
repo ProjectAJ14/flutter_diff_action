@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://pub.dev/packages/dart_diff_cli">
-    <img src="https://github.com/user-attachments/assets/2f925259-f0e2-448e-937e-22331f916d89" alt="Nonstop Logo" height="252" />
+    <img src="https://raw.githubusercontent.com/ProjectAJ14/flutter_diff_action/main/packages/dart_diff_cli/images/dart-diff-cli-icon-v2.png" alt="Dart Diff CLI icon" width="128" height="128" />
   </a>
   <p align="center">Runs Dart/Flutter tests, analysis and formatting only for what a change affects.</p>
 </p>
