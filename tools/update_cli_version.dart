@@ -29,34 +29,11 @@ void main() async {
 const packageVersion = '$version';
 ''');
 
-// Check if the file is modified
-    final isModified =
-        await Process.run('git', ['diff', '--quiet', versionFile.path]);
-    if (isModified.exitCode == 1) {
-      logger.info('version.dart has been modified');
-
-      // Check if the last commit is a release commit
-      final lastCommit = await Process.run('git', ['log', '-1', '--pretty=%B']);
-      final commitMessage = lastCommit.stdout.toString().trim();
-
-      if (commitMessage.startsWith('chore(release):')) {
-        logger.info('Amending last release commit');
-
-        // Stage and amend the commit
-        await Process.run('git', ['add', versionFile.path]);
-        await Process.run('git', ['commit', '--amend', '--no-edit']);
-
-        logger.success(
-          'Successfully updated version.dart with '
-          'version $version in $_cliDirectory',
-        );
-      } else {
-        logger.warn('version.dart has been modified but the '
-            'last commit is not a release commit');
-      }
-    } else {
-      logger.success('No changes detected');
-    }
+    // Runs as the Melos preCommit hook, which only stages pubspec.yaml and
+    // CHANGELOG.md, so stage version.dart for the release commit and tag.
+    final add = await Process.run('git', ['add', versionFile.path]);
+    if (add.exitCode != 0) throw Exception(add.stderr);
+    logger.success('Updated ${versionFile.path} to $version');
   } catch (e) {
     logger.err('An error occurred while updating the version $e');
     exit(1);
