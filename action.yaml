@@ -95,10 +95,14 @@ runs:
         exe="$dir/bin/dart_diff"
         if [ "$RUNNER_OS" = Windows ]; then exe="$exe.exe"; fi
         if [ ! -f "$exe" ] || [ "$(cat "$dir/source" 2>/dev/null)" != "$GITHUB_ACTION_PATH" ]; then
+          src="$GITHUB_ACTION_PATH/packages/dart_diff_cli"
           rm -rf "$dir"
-          mkdir -p "$dir/bin"
-          cp -R "$GITHUB_ACTION_PATH/packages/dart_diff_cli" "$dir/cli"
-          rm -rf "$dir/cli/.dart_tool"
+          mkdir -p "$dir/bin" "$dir/cli"
+          cp -R "$src/bin" "$src/lib" "$dir/cli/"
+          # Without dev_dependencies (build_runner, test, ...): about 50 fewer
+          # packages to download, none of them needed to compile.
+          awk '/^dev_dependencies:/ { skip = 1; next } /^[^ ]/ { skip = 0 } !skip' \
+            "$src/pubspec.yaml" > "$dir/cli/pubspec.yaml"
           printf 'resolution:\n' > "$dir/cli/pubspec_overrides.yaml"
           (cd "$dir/cli" && dart pub get && dart compile exe bin/dart_diff.dart -o "$exe")
           echo "$GITHUB_ACTION_PATH" > "$dir/source"
