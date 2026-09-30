@@ -266,14 +266,25 @@ jobs:
   # Layout (both under $GITHUB_WORKSPACE, which is not itself a repo):
   #   action-src/  this repo, used as the Action
   #   fixture/     a fresh repo made from example/simple_app, 'origin' is ../origin.git
+  # macOS and Windows run it too: the Action has code for each (the .exe,
+  # cmd.exe's command-line limit, runInShell for flutter.bat).
   test_repo_root:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest]
         flutter: ['3.27.0', stable]
         expect: [success, failure]
-    name: Repo Root - Flutter ${{ matrix.flutter }} - expect ${{ matrix.expect }}
+        include:
+          - {os: macos-latest, flutter: stable, expect: success}
+          - {os: macos-latest, flutter: stable, expect: failure}
+          - {os: windows-latest, flutter: stable, expect: success}
+          - {os: windows-latest, flutter: stable, expect: failure}
+    name: Repo Root - ${{ matrix.os }} - Flutter ${{ matrix.flutter }} - expect ${{ matrix.expect }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Clone repository
         uses: actions/checkout@v5
@@ -464,9 +475,72 @@ jobs:
           # The root pubspec.yaml is outside every package, yet all of them run.
           jq -e '.ran == "full" and ."full-suite" == "true" and (.packages | fromjson | length) == 4' <<< "$ROOT"
 
+  # The README's "Fan out a matrix per package" recipe, end to end: one job
+  # works out the packages, then a matrix job per package runs the tests.
+  test_fan_out_changes:
+    runs-on: ubuntu-latest
+    name: Fan Out - changes
+    outputs:
+      packages: ${{ steps.diff.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - run: dart pub global activate melos '>=6.3.2 <9.0.0'
+      - run: flutter pub get
+        working-directory: example/super_app
+      # run-all: a pull request rarely changes the example, and every package must come out.
+      - id: diff
+        uses: ./
+        with:
+          use-melos: true
+          run-all: true
+          working-dir: example/super_app
+      - name: Check the packages
+        env:
+          PACKAGES: ${{ steps.diff.outputs.packages }}
+        run: |
+          set -x
+          jq -e '. == ["example/super_app/app/super_app", "example/super_app/feature/api", "example/super_app/feature/auth", "example/super_app/feature/core"]' <<< "$PACKAGES"
+
+  test_fan_out:
+    needs: test_fan_out_changes
+    if: needs.test_fan_out_changes.outputs.packages != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.test_fan_out_changes.outputs.packages) }}
+    name: Fan Out - ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      # A pub workspace resolves at its root.
+      - run: flutter pub get
+        working-directory: example/super_app
+      - id: test
+        uses: ./
+        with:
+          command: flutter test
+          run-all: true
+          working-dir: ${{ matrix.package }}
+      - name: Check it ran
+        env:
+          RAN: ${{ steps.test.outputs.ran }}
+        run: '[ "$RAN" = full ]'
+
   verify_tests:
     name: Verify All Tests
-    needs: [test_cli, test_simple_app, test_super_app, test_repo_root, test_outputs]
+    needs: [test_cli, test_simple_app, test_super_app, test_repo_root, test_outputs, test_fan_out_changes, test_fan_out]
     runs-on: ubuntu-latest
     if: always()
     steps:

@@ -174,6 +174,8 @@ Paths are relative to the repository root. The job summary shows the same, with 
 
 In each package, the tests that use a changed file, in that package or in a package it depends on, run. A change to a root file such as `pubspec.lock`, `pubspec.yaml`, `melos.yaml` or `analysis_options.yaml` runs every package in full.
 
+Melos leaves out the workspace root package. If the root has tests of its own, set `useRootAsPackage: true` in the Melos config (the `melos:` key of the root `pubspec.yaml`, or `melos.yaml` on Melos 6); otherwise they never run.
+
 #### Fan out a matrix per package
 
 ```yaml
@@ -226,7 +228,7 @@ jobs:
 
 ## How It Works
 
-1. Compiles the `dart_diff` CLI from the Action's own checkout, once per job, so `@v2` (or any tag or SHA) always runs the CLI code of that same tag. Nothing is downloaded from pub.dev except the CLI's dependencies.
+1. Compiles the `dart_diff` CLI from the Action's own checkout, once per job, so `@v2` (or any tag or SHA) always runs the CLI code of that same tag. Nothing is downloaded from pub.dev except the CLI's dependencies, at the versions pinned in `packages/dart_diff_cli/tool/action.lock`, so a new release of one of them can't change the Action.
 2. Finds the files changed against the merge base with the base, plus untracked files, across the repository.
 3. Picks what to run, by mode (`auto` picks `test` for `flutter test`, `dart test` and `fvm flutter test`, `package` for `flutter analyze` and `dart analyze`, `files` otherwise):
    - **test**: every `test/**_test.dart` that imports, exports or includes as a part a changed file, directly or through other files, plus changed test files. Imports are followed into local packages (pub workspace members, path dependencies) with `.dart_tool/package_config.json`. A deleted file's importers are followed the same way. The **full** test suite runs instead when:
