@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/command_runner.dart';
@@ -25,7 +26,7 @@ void main() {
       Directory.current = repo.dir;
       logger = _MockLogger();
       runner = CommandRunner<int>('dart_diff', '')
-        ..addCommand(ExecCommand(logger: logger));
+        ..addCommand(ExecCommand(logger: logger, environment: {}));
     });
 
     tearDown(() {
@@ -54,12 +55,19 @@ void main() {
       verifyNever(() => logger.info(any(that: startsWith('Running'))));
     });
 
+    test('does nothing when no file changed', () async {
+      expect(await runner.run(['exec', '--', 'git', 'ls-files']), 0);
+      verify(() => logger.info('Nothing to run: no files changed.')).called(1);
+      verifyNever(() => logger.info(any(that: startsWith('Running'))));
+    });
+
     test('does nothing without modified Dart files', () async {
       repo.write('README.md', 'changed');
 
       expect(await runner.run(['exec', '--', 'git', 'ls-files']), 0);
-      verify(() => logger.info('No modified Dart files detected.')).called(1);
-      verifyNever(() => logger.info(any(that: startsWith('Running'))));
+      verify(() => logger.info('Nothing to run: no changed Dart files.'))
+          .called(1);
+      verifyNever(() => logger.info(any(that: startsWith('Running:'))));
     });
 
     test('leaves the command options alone without "--"', () async {
@@ -82,75 +90,248 @@ void main() {
         ..git(['rm', '-q', 'packages/pkg/lib/b.dart']);
 
       expect(await runner.run(['exec', '--', 'git', 'ls-files']), 0);
-      verify(() => logger.info('Modified Dart files[2]:')).called(1);
+      verify(() => logger.info('Running on the changed Dart files[2]:'))
+          .called(1);
       verify(() => logger.info('Running: git ls-files lib/a.dart lib/new.dart'))
           .called(1);
     });
 
-    test('maps changed files to their tests for test commands', () async {
+    test('runs the tests that use the changed files', () async {
       repo
+        ..write('lib/b.dart', "import 'a.dart';")
+        ..write('test/a_test.dart', "import 'package:repo/a.dart';")
+        ..write('test/b_test.dart', "import '../lib/b.dart';")
+        ..write('test/c_test.dart', 'void main() {}')
+        ..write('integration_test/a_test.dart', "import '../lib/a.dart';")
+        ..git(['add', '.'])
+        ..git(['commit', '-qm', 'tests'])
+        ..git(['push', '-q', 'origin', 'main'])
         ..write('lib/a.dart', 'void a2() {}')
-        ..write('test/a_test.dart', 'void main() {}')
-        ..write('test/b_test.dart', 'void main() {}');
-
-      expect(await runner.run(['exec', '--', 'git', 'test']), 0);
-      verify(
-        () =>
-            logger.info('Running: git test test/a_test.dart test/b_test.dart'),
-      ).called(1);
-    });
-
-    test('runs the full suite when a test helper changes', () async {
-      repo
-        ..write('lib/a.dart', 'void a2() {}')
-        ..write('test/helpers.dart', 'void pump() {}');
+        ..write('test/d_test.dart', 'void main() {}');
 
       expect(await runner.run(['exec', '--', 'git', 'test']), 0);
       verify(
         () => logger.info(
-          'test/helpers.dart changed, running the full test suite.',
+          'Running: git test test/a_test.dart test/b_test.dart '
+          'test/d_test.dart',
         ),
       ).called(1);
-      verify(() => logger.info('Running: git test')).called(1);
     });
 
-    test('runs the full suite when a source file is deleted', () async {
+    test('runs the tests of the files importing a deleted file', () async {
       repo
-        ..write('test/a_test.dart', 'void main() {}')
+        ..write('lib/b.dart', "import 'a.dart';")
+        ..write('test/b_test.dart', "import 'package:repo/b.dart';")
         ..git(['add', '.'])
         ..git(['commit', '-qm', 'test'])
         ..git(['push', '-q', 'origin', 'main'])
         ..git(['rm', '-q', 'lib/a.dart']);
 
       expect(await runner.run(['exec', '--', 'git', 'test']), 0);
+      verify(() => logger.info('Running: git test test/b_test.dart')).called(1);
+    });
+
+    test('runs the full suite when a test fixture changes', () async {
+      repo
+        ..write('lib/a.dart', 'void a2() {}')
+        ..write('test/fixtures/user.json', '{}');
+
+      expect(await runner.run(['exec', '--', 'git', 'test']), 0);
       verify(
-        () => logger.info('lib/a.dart changed, running the full test suite.'),
+        () => logger.info(
+          'Running on everything: test/fixtures/user.json changed.',
+        ),
       ).called(1);
       verify(() => logger.info('Running: git test')).called(1);
     });
 
-    test('skips changed files that have no test', () async {
+    test('runs nothing when no test uses the changed files', () async {
       repo
         ..write('lib/a.dart', 'void a2() {}')
-        ..write('bin/tool.dart', 'void main() {}')
-        ..write('test/a_test.dart', 'void main() {}');
+        ..write('test/c_test.dart', 'void main() {}')
+        ..git(['add', 'test'])
+        ..git(['commit', '-qm', 'test'])
+        ..git(['push', '-q', 'origin', 'main']);
 
       expect(await runner.run(['exec', '--', 'git', 'test']), 0);
-      verify(() => logger.info('Running: git test test/a_test.dart')).called(1);
-    });
-
-    test('runs nothing when no changed file has a test', () async {
-      repo.write('bin/tool.dart', 'void main() {}');
-
-      expect(await runner.run(['exec', '--', 'git', 'test']), 0);
-      verify(() => logger.info('No files to process.')).called(1);
+      verify(
+        () => logger.info('Nothing to run: no test uses the changed files.'),
+      ).called(1);
       verifyNever(() => logger.info(any(that: startsWith('Running:'))));
     });
 
-    test('rejects a branch or remote that looks like an option', () async {
+    group('in a sub-package', () {
+      setUp(() {
+        repo
+          ..write('packages/pkg/pubspec.yaml', 'name: pkg')
+          ..write('packages/pkg/test/b_test.dart', "import '../lib/b.dart';")
+          ..write('packages/pkg/lib/c.dart', "import '../../../lib/a.dart';")
+          ..write('packages/pkg/test/c_test.dart', "import '../lib/c.dart';")
+          ..git(['add', '.'])
+          ..git(['commit', '-qm', 'pkg'])
+          ..git(['push', '-q', 'origin', 'main']);
+        Directory.current = Directory('${repo.dir.path}/packages/pkg');
+      });
+
+      test('runs the tests that use a changed file outside it', () async {
+        repo.write('lib/a.dart', 'void a2() {}');
+
+        expect(await runner.run(['exec', '--', 'git', 'test']), 0);
+        verify(() => logger.info('Running: git test test/c_test.dart'))
+            .called(1);
+      });
+
+      test('runs the full suite when the workspace lock file changes',
+          () async {
+        repo.write('pubspec.lock', 'packages: {}');
+
+        expect(await runner.run(['exec', '--', 'git', 'test']), 0);
+        verify(() =>
+                logger.info('Running on everything: pubspec.lock changed.'))
+            .called(1);
+      });
+
+      test('in package mode, runs when the package changed', () async {
+        repo.write('packages/pkg/README.md', 'changed');
+
+        expect(
+          await runner.run(['exec', '--mode', 'package', 'git', 'ls-files']),
+          0,
+        );
+        verify(() => logger.info('Running on everything: README.md changed.'))
+            .called(1);
+        verify(() => logger.info('Running: git ls-files')).called(1);
+      });
+
+      test('in package mode, runs when a file it uses changed', () async {
+        repo.write('lib/a.dart', 'void a2() {}');
+
+        expect(
+          await runner.run(['exec', '--mode', 'package', 'git', 'ls-files']),
+          0,
+        );
+        verify(
+          () => logger.info(
+            'Running on everything: lib/c.dart uses a changed file.',
+          ),
+        ).called(1);
+      });
+
+      test('in package mode, does nothing when nothing it uses changed',
+          () async {
+        repo.write('README.md', 'changed');
+
+        expect(
+          await runner.run(['exec', '--mode', 'package', 'git', 'ls-files']),
+          0,
+        );
+        verify(
+          () => logger.info(
+            'Nothing to run: nothing in this package or used by it changed.',
+          ),
+        ).called(1);
+      });
+
+      test('reports each run to a file of its own', () async {
+        final report = Directory('${repo.dir.parent.path}/report')
+          ..createSync();
+        repo.write('lib/a.dart', 'void a2() {}');
+
+        for (var i = 0; i < 2; i++) {
+          expect(
+            await runner.run(
+              ['exec', '--report', report.path, '--dry-run', 'git', 'test'],
+            ),
+            0,
+          );
+        }
+        verifyNever(() => logger.info(any(that: startsWith('Running:'))));
+        final files = report.listSync().cast<File>();
+        expect(files, hasLength(2));
+        expect(jsonDecode(files.first.readAsStringSync()), {
+          'package': 'packages/pkg',
+          'mode': 'test',
+          'ran': 'partial',
+          'reason': 'tests that use the changed files',
+          'base': 'origin/main',
+          'changed': ['lib/a.dart'],
+          'files': ['packages/pkg/test/c_test.dart'],
+        });
+      });
+    });
+
+    test('works out what would run without a command on a dry run', () async {
+      final report = Directory('${repo.dir.parent.path}/report')..createSync();
+      repo.write('lib/a.dart', 'void a2() {}');
+
+      expect(
+        await runner.run(['exec', '--dry-run', '--report', report.path]),
+        0,
+      );
+      final file = report.listSync().single as File;
+      expect(jsonDecode(file.readAsStringSync()), {
+        'package': '.',
+        'mode': 'package',
+        'ran': 'full',
+        'reason': 'lib/a.dart changed',
+        'base': 'origin/main',
+        'changed': ['lib/a.dart'],
+        'files': <String>[],
+      });
+    });
+
+    test('runs everything with --all', () async {
+      repo.write('lib/new.dart', 'void n() {}');
+
+      expect(await runner.run(['exec', '--all', '--', 'git', 'test']), 0);
+      verify(() => logger.info('Running on everything: --all was passed.'))
+          .called(1);
+      verify(() => logger.info('Running: git test')).called(1);
+
+      // Other commands get every Dart file.
+      expect(await runner.run(['exec', '--all', '--', 'git', 'ls-files']), 0);
+      verify(
+        () => logger.info(
+          'Running: git ls-files lib/a.dart lib/new.dart '
+          'packages/pkg/lib/b.dart',
+        ),
+      ).called(1);
+    });
+
+    test('runs everything when a file matches --run-all-on', () async {
+      repo.write('tools/gen/config.yaml', 'x: 1');
+
+      expect(
+        await runner.run(
+          ['exec', '--run-all-on', 'tools/**', '--', 'git', 'test'],
+        ),
+        0,
+      );
+      verify(
+        () => logger.info(
+          'Running on everything: tools/gen/config.yaml changed.',
+        ),
+      ).called(1);
+    });
+
+    test('compares with --base', () async {
+      repo
+        ..write('lib/a.dart', 'void a2() {}')
+        ..git(['commit', '-qam', 'second']);
+
+      expect(
+        await runner.run(['exec', '--base', 'HEAD~1', '--', 'git', 'ls-files']),
+        0,
+      );
+      verify(() => logger.info('Running: git ls-files lib/a.dart')).called(1);
+    });
+
+    test('rejects a branch, remote or base that looks like an option',
+        () async {
       for (final args in [
         ['-b', '--upload-pack=x'],
         ['-r', '-x'],
+        ['--base', '-x'],
       ]) {
         expect(
           await runner.run(['exec', ...args, '--', 'git', 'ls-files']),
@@ -158,23 +339,25 @@ void main() {
         );
       }
       verify(
-        () => logger.err('Error: The branch and remote cannot start with "-".'),
-      ).called(2);
+        () => logger.err(
+          'Error: The branch, remote and base cannot start with "-".',
+        ),
+      ).called(3);
     });
 
     test('runs the full suite instead of splitting a test run', () async {
       repo
-        ..write('lib/a.dart', 'void a2() {}')
         ..write('test/a_test.dart', 'void main() {}')
         ..write('test/b_test.dart', 'void main() {}');
       runner = CommandRunner<int>('dart_diff', '')
-        ..addCommand(ExecCommand(logger: logger, maxCommandLength: 1));
+        ..addCommand(
+          ExecCommand(logger: logger, maxCommandLength: 1, environment: {}),
+        );
 
       expect(await runner.run(['exec', '--', 'git', 'test']), 0);
       verify(
         () => logger.info(
-          'Too many test files for one command line, '
-          'running the full test suite.',
+          'Running on everything: too many tests for one command line.',
         ),
       ).called(1);
       verify(() => logger.info('Running: git test')).called(1);
@@ -199,7 +382,9 @@ void main(List<String> args) => exit(
         ..write('lib/fail.dart', 'void f() {}')
         ..write('lib/z.dart', 'void z() {}');
       runner = CommandRunner<int>('dart_diff', '')
-        ..addCommand(ExecCommand(logger: logger, maxCommandLength: 1));
+        ..addCommand(
+          ExecCommand(logger: logger, maxCommandLength: 1, environment: {}),
+        );
 
       final exitCode = await runner.run(
         ['exec', '--', Platform.resolvedExecutable, script.path],
@@ -221,8 +406,25 @@ void main(List<String> args) => exit(
         await runner.run(['exec', '--no-fetch', '--', 'git', 'ls-files']),
         0,
       );
-      verifyNever(() => logger.warn(any()));
+      verifyNever(
+        () => logger.warn(any(that: startsWith('Could not fetch'))),
+      );
       verify(() => logger.info('Running: git ls-files lib/a.dart')).called(1);
+    });
+
+    test('warns with an annotation on GitHub Actions', () async {
+      runner = CommandRunner<int>('dart_diff', '')
+        ..addCommand(
+          ExecCommand(logger: logger, environment: {'GITHUB_ACTIONS': 'true'}),
+        );
+
+      expect(await runner.run(['exec', '--', 'git', 'ls-files']), 0);
+      verify(
+        () => logger.info(
+          '::warning::HEAD is already part of origin/main, '
+          'so only uncommitted changes count.',
+        ),
+      ).called(1);
     });
   });
 }
