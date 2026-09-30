@@ -6,32 +6,78 @@ on:
       - main
 
 jobs:
+  test_cli:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        sdk: ['3.6.0', stable]
+    name: CLI - ${{ matrix.os }} - Dart ${{ matrix.sdk }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: packages/dart_diff_cli
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v5
+
+      - name: Set up Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.sdk }}
+
+      # The root workspace (melos 7) needs Dart 3.9, so on the minimum SDK
+      # resolve the CLI on its own, as the Action does.
+      - name: Resolve the CLI outside the workspace
+        if: matrix.sdk == '3.6.0'
+        run: printf 'resolution:\n' > pubspec_overrides.yaml
+
+      - name: Install dependencies
+        run: dart pub get
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test tool bin
+
+      - name: Analyze
+        run: dart analyze --fatal-infos
+
+      - name: Run tests
+        run: dart test
+
+      - name: Check coverage (100%)
+        if: matrix.os == 'ubuntu-latest' && matrix.sdk == 'stable'
+        run: bash tool/coverage.sh
+
   test_simple_app:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        # 3.27.0 is the minimum supported Flutter (Dart 3.6); 'any' is the latest stable.
+        flutter: ['3.27.0', any]
         command:
           - 'flutter test --no-pub --coverage'
           - 'flutter test'
+          - 'flutter test --plain-name "Counter increments"'
           - 'flutter analyze --fatal-infos'
           - 'flutter analyze'
           - 'dart format --set-exit-if-changed'
           - 'dart format'
-    name: Simple App - ${{ matrix.command }}
+    name: Simple App - Flutter ${{ matrix.flutter }} - ${{ matrix.command }}
     defaults:
       run:
         working-directory: 'example/simple_app'
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.3'
+          flutter-version: ${{ matrix.flutter }}
           channel: 'stable'
           cache: true
 
@@ -52,6 +98,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # 3.27.0 is the minimum supported Flutter (Dart 3.6); 'any' is the latest stable.
+        flutter: ['3.27.0', any]
         command:
           - 'flutter test --no-pub --coverage'
           - 'flutter test'
@@ -59,28 +107,30 @@ jobs:
           - 'flutter analyze'
           - 'dart format --set-exit-if-changed'
           - 'dart format'
-    name: Super App - ${{ matrix.command }}
+    name: Super App - Flutter ${{ matrix.flutter }} - ${{ matrix.command }}
     defaults:
       run:
         working-directory: 'example/super_app'
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.3'
+          flutter-version: ${{ matrix.flutter }}
           channel: 'stable'
           cache: true
 
+      # Pub picks the newest melos the SDK allows: 6.3.2 on Flutter 3.27 (reads
+      # melos.yaml), 8.x on stable, which hands off to the app's local melos 7.
       - name: Install Melos
-        run: dart pub global activate melos
+        run: dart pub global activate melos '>=6.3.2 <9.0.0'
 
       - name: Run Melos
-        run: melos bs
+        run: melos bootstrap
 
       - name: Run Flutter Diff Action
         uses: ./
@@ -91,9 +141,76 @@ jobs:
           use-melos: true
           debug: true
 
+  # The project is the git repo root, and the Action's exit code follows the command's.
+  # Layout (both under $GITHUB_WORKSPACE, which is not itself a repo):
+  #   action-src/  this repo, used as the Action
+  #   fixture/     a fresh repo made from example/simple_app, 'origin' is ../origin.git
+  test_repo_root:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        flutter: ['3.27.0', any]
+        expect: [success, failure]
+    name: Repo Root - Flutter ${{ matrix.flutter }} - expect ${{ matrix.expect }}
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v5
+        with:
+          path: action-src
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ matrix.flutter }}
+          channel: 'stable'
+          cache: true
+
+      - name: Create fixture repo
+        env:
+          EXPECT: ${{ matrix.expect }}
+        run: |
+          cp -R action-src/example/simple_app fixture
+          cd fixture
+          printf '.dart_tool/\nbuild/\ncoverage/\n' > .gitignore
+          flutter pub get
+          git init -b main
+          git config user.name ci
+          git config user.email ci@example.com
+          git add -A
+          git commit -m init
+          git clone --bare . ../origin.git
+          git remote add origin ../origin.git
+          git fetch origin
+          git checkout -b feature
+          echo '// changed' >> lib/main.dart
+          if [ "$EXPECT" = failure ]; then
+            printf "import 'package:flutter_test/flutter_test.dart';\n\nvoid main() {\n  test('fails', () => expect(1, 2));\n}\n" > test/fail_test.dart
+          fi
+          git add -A
+          git commit -m change
+
+      - name: Run Flutter Diff Action
+        id: diff
+        continue-on-error: true
+        uses: ./action-src
+        with:
+          branch: main
+          command: flutter test
+          working-dir: fixture
+          debug: true
+
+      - name: Check outcome
+        env:
+          OUTCOME: ${{ steps.diff.outcome }}
+          EXPECT: ${{ matrix.expect }}
+        run: |
+          echo "outcome=$OUTCOME expected=$EXPECT"
+          [ "$OUTCOME" = "$EXPECT" ]
+
   verify_tests:
     name: Verify All Tests
-    needs: [test_simple_app, test_super_app]
+    needs: [test_cli, test_simple_app, test_super_app, test_repo_root]
     runs-on: ubuntu-latest
     if: always()
     steps:

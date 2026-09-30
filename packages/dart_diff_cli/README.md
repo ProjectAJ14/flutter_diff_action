@@ -55,6 +55,39 @@ ddf exec [options] -- [command] [command-args]
 |-----------------|-------|---------------------------------------|----------|
 | `--branch`      | `-b`  | Base branch for comparison            | `main`   |
 | `--remote`      | `-r`  | Remote repository name                | `origin` |
+| `--[no-]fetch`  |       | Run `git fetch <remote> <branch>` first | on     |
+
+`--branch` and `--remote` can't start with `-`.
+
+**How files are picked:**
+
+1. The changed files are those in `git diff --merge-base <remote>/<branch>` (or the diff against the branch tip when there is no merge base, e.g. in a shallow clone) plus untracked files. Paths are relative to, and limited to, the current directory, which must contain a `pubspec.yaml`.
+2. A failed `git fetch` only prints a warning and uses the local `<remote>/<branch>`. Use `--no-fetch` when the ref is already up to date, e.g. after fetching once for every package of a mono-repo.
+3. Only existing `.dart` files are passed to the command.
+4. For test commands (`flutter test`, `dart test`, `fvm flutter test`), each file is replaced by its test: `lib/src/a.dart` -> `test/src/a_test.dart`, other files -> a `_test.dart` sibling, `_test.dart` files as they are.
+
+**Full test suite:** for a test command, the command runs with no files (the whole suite) when:
+
+- `pubspec.yaml`, `pubspec.lock`, `dart_test.yaml`, `build.yaml` or `l10n.yaml` at the project root changed,
+- a file under `test/` that isn't a `_test.dart` changed (helpers, fixtures, goldens),
+- a non-Dart file under `lib/` or `assets/` changed,
+- a Dart file that isn't a `_test.dart` was deleted or renamed.
+
+Otherwise, a changed file with no matching test file is skipped, and nothing runs if no changed file has a test.
+
+**Long file lists:** the files are split over several runs of the command so each command line stays under the OS limit (6000 characters on Windows, leaving room for what `flutter.bat` adds to cmd.exe's 8191 limit). Every run happens, even after a failure. A test command that would need several runs runs the full suite once instead, so coverage and the test summary stay whole.
+
+`exec` stops reading its own options at the first word of the command, so `--` is optional: `dart_diff exec -b develop flutter test --coverage` works too.
+
+**Exit codes:**
+
+| Code | Meaning |
+|------|---------|
+| `0`  | The command succeeded, or there was nothing to run |
+| `1`  | No `pubspec.yaml`, no command given, not a git repository, or the diff failed |
+| `64` | Invalid usage, e.g. an unknown option or a branch starting with `-` |
+| `69` | `git` or the command could not be started |
+| other | The command's own exit code (the first failing one when split over several runs) |
 
 **Examples:**
 
@@ -68,7 +101,7 @@ dart_diff exec -- flutter test
 dart_diff exec -b develop -- flutter test
 
 # Run tests with verbose output
-dart_diff exec --verbose -- flutter test
+dart_diff --verbose exec -- flutter test
 ```
 
 **Run analyzer on changed files**
@@ -136,6 +169,8 @@ dart_diff exec -- flutter test
 dart_diff exec -b main -- flutter test --no-pub --coverage
 ```
 
+When the `CI` environment variable is set, the pub.dev update check is skipped.
+
 ## Global Options
 
 The following options can be used with any command:
@@ -162,9 +197,9 @@ For Windows:
 set PATH=%PATH%;%LOCALAPPDATA%\Pub\Cache\bin
 ```
 
-### No Files to Process
+### No Modified Dart Files
 
-If you see "No files to process" and expect there to be changes, check:
+If you see "No modified Dart files detected." and expect there to be changes, check:
 
 - That you're using the correct base branch with `-b`
 - That you have uncommitted changes in your repository
@@ -194,6 +229,8 @@ Contributions are welcome and appreciated! Here's how you can contribute:
 - **Suggest features**: Open an issue describing your idea and its benefits
 - **Submit PRs**: Implement bug fixes or features (please open an issue first)
 - **Improve docs**: Fix typos, clarify explanations, add examples
+
+Before opening a PR, run `dart test` and `bash tool/coverage.sh` in `packages/dart_diff_cli`. The coverage script fails unless every line under `lib/` is covered.
 
 ## License
 

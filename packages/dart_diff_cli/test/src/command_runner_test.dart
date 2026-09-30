@@ -39,6 +39,7 @@ void main() {
       commandRunner = DartDiffCliCommandRunner(
         logger: logger,
         pubUpdater: pubUpdater,
+        environment: {},
       );
     });
 
@@ -50,6 +51,16 @@ void main() {
       final result = await commandRunner.run(['--version']);
       expect(result, equals(ExitCode.success.code));
       verify(() => logger.info(updatePrompt)).called(1);
+    });
+
+    test('does not check for updates on CI', () async {
+      final result = await DartDiffCliCommandRunner(
+        logger: logger,
+        pubUpdater: pubUpdater,
+        environment: {'CI': 'true'},
+      ).run(['--version']);
+      expect(result, equals(ExitCode.success.code));
+      verifyNever(() => pubUpdater.getLatestVersion(any()));
     });
 
     test(
@@ -135,6 +146,14 @@ void main() {
       verify(() => logger.info('exception usage')).called(1);
     });
 
+    test('handles ProcessException', () async {
+      const exception = ProcessException('git', ['diff'], 'not found');
+      when(() => logger.info(any())).thenThrow(exception);
+      final result = await commandRunner.run(['--version']);
+      expect(result, equals(ExitCode.unavailable.code));
+      verify(() => logger.err('$exception')).called(1);
+    });
+
     group('--version', () {
       test('outputs current version', () async {
         final result = await commandRunner.run(['--version']);
@@ -157,17 +176,17 @@ void main() {
       test('enables verbose logging for sub commands', () async {
         final result = await commandRunner.run([
           '--verbose',
-          'sample',
-          '--cyan',
+          'exec',
+          '--help',
         ]);
         expect(result, equals(ExitCode.success.code));
 
         verify(() => logger.detail('Argument information:')).called(1);
         verify(() => logger.detail('  Top level options:')).called(1);
         verify(() => logger.detail('  - verbose: true')).called(1);
-        verify(() => logger.detail('  Command: sample')).called(1);
+        verify(() => logger.detail('  Command: exec')).called(1);
         verify(() => logger.detail('    Command options:')).called(1);
-        verify(() => logger.detail('    - cyan: true')).called(1);
+        verify(() => logger.detail('    - help: true')).called(1);
       });
     });
   });

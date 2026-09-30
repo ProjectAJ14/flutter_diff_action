@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:dart_diff_cli/src/utils/index.dart';
 import 'package:mason_logger/mason_logger.dart';
@@ -8,9 +9,19 @@ import 'package:mason_logger/mason_logger.dart';
 ///
 class ExecCommand extends Command<int> {
   /// Creates a new instance of [ExecCommand].
+  ///
+  /// [maxCommandLength] caps the length of each command line; the changed
+  /// files are split over several runs to stay under it. It defaults to what
+  /// the platform shell allows.
   ExecCommand({
     required Logger logger,
-  }) : _logger = logger {
+    int? maxCommandLength,
+  })  : _logger = logger,
+        // runInShell goes through cmd.exe on Windows, which allows 8191
+        // characters after expansion. flutter.bat re-expands the arguments
+        // with its own paths, so leave it about 2000 characters.
+        _maxCommandLength =
+            maxCommandLength ?? (Platform.isWindows ? 6000 : 100000) {
     argParser
       ..addOption(
         Options.branch.name,
@@ -23,8 +34,19 @@ class ExecCommand extends Command<int> {
         abbr: Options.remote.abbr,
         defaultsTo: Options.remote.defaultVal,
         help: 'Specify the remote repository to use for git diff',
+      )
+      ..addFlag(
+        'fetch',
+        defaultsTo: true,
+        help: 'Run git fetch for the base branch before the diff',
       );
   }
+
+  // Stop at the first positional argument, so the wrapped command's options
+  // (e.g. `flutter test --coverage`) are not parsed as ours even without
+  // `--`. Melos 7 drops the `--` that `melos exec` passes along.
+  @override
+  final argParser = ArgParser(allowTrailingOptions: false);
 
   @override
   String get description => 'Execute a command on changed Dart/Flutter files';
@@ -33,6 +55,7 @@ class ExecCommand extends Command<int> {
   String get name => 'exec';
 
   final Logger _logger;
+  final int _maxCommandLength;
 
   @override
   Future<int> run() async {
@@ -44,11 +67,6 @@ class ExecCommand extends Command<int> {
       return 1;
     }
 
-    if (argResults == null) {
-      _logger.info('No arguments.\n$usage');
-      return 1;
-    }
-
     final args = argResults!;
     _logger.detail('Arguments: ${args.arguments.join(', ')}');
 
@@ -57,21 +75,46 @@ class ExecCommand extends Command<int> {
 
     _logger.detail('Using remote: $remote, branch: $branch');
 
+    // They are passed to git as arguments, so they must not look like options.
+    if (branch.startsWith('-') || remote.startsWith('-')) {
+      _logger.err('Error: The branch and remote cannot start with "-".');
+      return ExitCode.usage.code;
+    }
+
     final extraArgs = args.rest;
     if (extraArgs.isEmpty) {
       _logger.err('No command specified.\n$usage');
       return 1;
     }
 
-    final bool isTest = extraArgs.any((e) => e == 'test');
-    _logger.info('Running: ${extraArgs.join(' ')}');
+    final changedFiles = getModifiedFiles(
+      remote,
+      branch,
+      logger: _logger,
+      fetch: args.flag('fetch'),
+    );
+    if (changedFiles == null) return 1;
 
-    final relativeBasePath = getRelativeBasePath(logger: _logger);
+    final isTest = isTestCommand(extraArgs);
+    if (isTest) {
+      // A deleted source file can break the tests of the files importing it.
+      final trigger = changedFiles
+          .where(
+            (file) =>
+                affectsAllTests(file) ||
+                (file.endsWith('.dart') &&
+                    !file.endsWith('_test.dart') &&
+                    !File(file).existsSync()),
+          )
+          .firstOrNull;
+      if (trigger != null) {
+        _logger.info('$trigger changed, running the full test suite.');
+        return runCommand(extraArgs, logger: _logger);
+      }
+    }
 
-    final modifiedFiles = getModifiedFiles(remote, branch, logger: _logger)
-        .where(
-          (file) => file.endsWith('.dart') && file.startsWith(relativeBasePath),
-        )
+    final modifiedFiles = changedFiles
+        .where((file) => file.endsWith('.dart') && File(file).existsSync())
         .toList();
 
     if (modifiedFiles.isEmpty) {
@@ -84,44 +127,39 @@ class ExecCommand extends Command<int> {
       _logger.info('  - $file');
     }
 
-    final files = <String>[];
-    final testFiles = <String>{};
-
+    final fileList = <String>{};
     for (final file in modifiedFiles) {
-      final relativePath = file.withoutBasePath(relativeBasePath);
-      final platformPath = relativePath.withPlatformPath();
-
-      if (File(platformPath).existsSync()) {
-        files.add(relativePath);
-        if (!isTest) {
-          continue;
-        }
-
-        if (relativePath.endsWith('_test.dart')) {
-          testFiles.add(relativePath);
-        } else {
-          final testFile = calculateTestFile(relativePath);
-          if (File(testFile).existsSync()) {
-            testFiles.add(testFile);
-            _logger.detail('Added test file: $testFile for $relativePath');
-          } else {
-            _logger.detail('No test file found for $relativePath. Skipping...');
-          }
-        }
+      if (!isTest || file.endsWith('_test.dart')) {
+        fileList.add(file);
+      } else if (File(calculateTestFile(file)).existsSync()) {
+        fileList.add(calculateTestFile(file));
       } else {
-        _logger.warn('File does not exist: $platformPath. Skipping...');
+        _logger.detail('No test file found for $file. Skipping...');
       }
     }
 
-    final fileList = isTest ? testFiles : files;
     if (fileList.isEmpty) {
       _logger.info('No files to process.');
       return 0;
     }
 
     _logger.detail('Processing ${fileList.length} files');
-    runCommand([...extraArgs, ...fileList], logger: _logger);
 
-    return 0;
+    final commands = chunkArgs(extraArgs, fileList.toList(), _maxCommandLength);
+    // Split test runs would each overwrite the coverage report and print
+    // their own summary, so run the whole suite once instead.
+    if (isTest && commands.length > 1) {
+      _logger.info('Too many test files for one command line, '
+          'running the full test suite.');
+      return runCommand(extraArgs, logger: _logger);
+    }
+
+    // Run every chunk, even after a failure, and report the first failure.
+    var exitCode = 0;
+    for (final command in commands) {
+      final code = await runCommand(command, logger: _logger);
+      if (exitCode == 0) exitCode = code;
+    }
+    return exitCode;
   }
 }

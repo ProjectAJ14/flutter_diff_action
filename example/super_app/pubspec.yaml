@@ -1,6 +1,12 @@
 name: example
 publish_to: none
 environment:
-  sdk: ^3.3.4
+  sdk: ^3.6.0
+workspace:
+  - app/super_app
+  - feature/api
+  - feature/auth
+  - feature/core
 dev_dependencies:
-  melos: ^6.3.2
+  # Melos 7+ needs Dart 3.9; older SDKs get 6.x, which reads melos.yaml.
+  melos: ">=6.3.2 <8.0.0"

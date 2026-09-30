@@ -1,3 +1,4 @@
+# Read only by Melos 6 (Dart < 3.9). Melos 7+ reads the workspace in pubspec.yaml.
 name: my_project
 
 packages:

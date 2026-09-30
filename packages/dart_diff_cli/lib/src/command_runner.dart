@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:cli_completion/cli_completion.dart';
@@ -23,8 +25,10 @@ class DartDiffCliCommandRunner extends CompletionCommandRunner<int> {
   DartDiffCliCommandRunner({
     Logger? logger,
     PubUpdater? pubUpdater,
+    Map<String, String>? environment,
   })  : _logger = logger ?? Logger(),
         _pubUpdater = pubUpdater ?? PubUpdater(),
+        _environment = environment ?? Platform.environment,
         super(executableName, description) {
     // Add root options and flags
     argParser
@@ -49,6 +53,7 @@ class DartDiffCliCommandRunner extends CompletionCommandRunner<int> {
 
   final Logger _logger;
   final PubUpdater _pubUpdater;
+  final Map<String, String> _environment;
 
   @override
   Future<int> run(Iterable<String> args) async {
@@ -75,6 +80,10 @@ class DartDiffCliCommandRunner extends CompletionCommandRunner<int> {
         ..info('')
         ..info(e.usage);
       return ExitCode.usage.code;
+    } on ProcessException catch (e) {
+      // e.g. git, or the command to run, is not installed.
+      _logger.err('$e');
+      return ExitCode.unavailable.code;
     }
   }
 
@@ -116,8 +125,10 @@ class DartDiffCliCommandRunner extends CompletionCommandRunner<int> {
       exitCode = await super.runCommand(topLevelResults);
     }
 
-    // Check for updates
-    if (topLevelResults.command?.name != UpdateCommand.commandName) {
+    // Check for updates, except on CI where nobody reads the prompt and the
+    // network round trip only slows the build down.
+    if (topLevelResults.command?.name != UpdateCommand.commandName &&
+        !_environment.containsKey('CI')) {
       await _checkForUpdates();
     }
 
