@@ -283,13 +283,21 @@ class ExecCommand extends Command<int> {
             )
             .toList()
           ..sort();
-        return tests.isEmpty
-            ? _none('no test uses the changed files')
-            : (
-                ran: 'partial',
-                reason: 'tests that use the changed files',
-                files: tests,
-              );
+        if (tests.isEmpty) return _none('no test uses the changed files');
+        // `flutter test` alone runs all of them, and reports a full run.
+        if (tests.every((file) => file.startsWith('test/')) &&
+            tests.length ==
+                Directory('test')
+                    .listSync(recursive: true)
+                    .where((e) => e is File && e.path.endsWith('_test.dart'))
+                    .length) {
+          return _full('every test uses the changed files');
+        }
+        return (
+          ran: 'partial',
+          reason: 'tests that use the changed files',
+          files: tests,
+        );
     }
   }
 

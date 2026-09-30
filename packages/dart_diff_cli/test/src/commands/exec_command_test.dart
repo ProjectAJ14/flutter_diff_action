@@ -122,6 +122,7 @@ void main() {
       repo
         ..write('lib/b.dart', "import 'a.dart';")
         ..write('test/b_test.dart', "import 'package:repo/b.dart';")
+        ..write('test/c_test.dart', 'void main() {}')
         ..git(['add', '.'])
         ..git(['commit', '-qm', 'test'])
         ..git(['push', '-q', 'origin', 'main'])
@@ -345,8 +346,26 @@ void main() {
       ).called(3);
     });
 
+    test('runs the full suite when every test is selected', () async {
+      repo
+        ..write('test/a_test.dart', 'void main() {}')
+        ..write('test/b_test.dart', 'void main() {}');
+
+      expect(await runner.run(['exec', '--', 'git', 'test']), 0);
+      verify(
+        () => logger.info(
+          'Running on everything: every test uses the changed files.',
+        ),
+      ).called(1);
+      verify(() => logger.info('Running: git test')).called(1);
+    });
+
     test('runs the full suite instead of splitting a test run', () async {
       repo
+        ..write('test/c_test.dart', 'void main() {}')
+        ..git(['add', '.'])
+        ..git(['commit', '-qm', 'test'])
+        ..git(['push', '-q', 'origin', 'main'])
         ..write('test/a_test.dart', 'void main() {}')
         ..write('test/b_test.dart', 'void main() {}');
       runner = CommandRunner<int>('dart_diff', '')
