@@ -1,3 +1,9 @@
+## 0.1.2
+
+ - **PERF**: deepen a shallow clone by 1 before 100 commits.
+ - **FEAT**(cli): report a full run when every test is selected.
+ - **DOCS**: describe the new shallow-clone depth, full-run rule and CI jobs.
+
 ## 0.1.1
 
  - **FEAT**(cli): pick tests through the import graph, add modes, base and reports.
