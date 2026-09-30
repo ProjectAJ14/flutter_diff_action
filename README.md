@@ -174,6 +174,8 @@ Paths are relative to the repository root. The job summary shows the same, with 
 
 In each package, the tests that use a changed file, in that package or in a package it depends on, run. A change to a root file such as `pubspec.lock`, `pubspec.yaml`, `melos.yaml` or `analysis_options.yaml` runs every package in full.
 
+Melos leaves out the workspace root package. If the root has tests of its own, set `useRootAsPackage: true` in the Melos config (the `melos:` key of the root `pubspec.yaml`, or `melos.yaml` on Melos 6); otherwise they never run.
+
 #### Fan out a matrix per package
 
 ```yaml
