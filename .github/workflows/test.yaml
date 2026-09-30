@@ -129,8 +129,10 @@ jobs:
       - name: Install Melos
         run: dart pub global activate melos '>=6.3.2 <9.0.0'
 
-      - name: Run Melos
-        run: melos bootstrap
+      # A pub workspace resolves at the root. melos 6's bootstrap would write
+      # pubspec_overrides.yaml for app -> auth -> core, which pub rejects in a workspace.
+      - name: Install dependencies
+        run: flutter pub get
 
       - name: Run Flutter Diff Action
         uses: ./
@@ -250,7 +252,7 @@ jobs:
           git clone --bare . ../origin.git
           git remote add origin ../origin.git
           git fetch origin
-          melos bootstrap
+          flutter pub get
           echo "main=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           git checkout -b core
           echo '// changed' >> feature/core/lib/core.dart

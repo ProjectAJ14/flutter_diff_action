@@ -55,7 +55,7 @@ The GitHub Action component runs your command only on what a change affects, in 
 - Flutter 3.27.0 or newer (Dart 3.6 or newer). CI tests the Action on Flutter 3.27.0 and the latest stable.
 - Your dependencies installed (`flutter pub get`), so the Action can follow `package:` imports into your local packages.
 - A checkout with enough history to find the merge base, e.g. `fetch-depth: 0`. In a shallow clone the Action fetches more history (100, then 1000 commits); if it still finds no merge base, it warns and compares with the base itself, which also picks up what changed on the base.
-- For `use-melos: true`, Melos installed and the workspace set up (`melos bootstrap`, or `dart pub get` at the root of a pub workspace).
+- For `use-melos: true`, Melos installed and the workspace set up: `melos bootstrap`, or for a pub workspace `dart pub get` at the root (Melos 6's bootstrap can't link workspace packages that depend on each other).
 
 ### Setup
 
@@ -163,7 +163,7 @@ Paths are relative to the repository root. The job summary shows the same, with 
 - name: Set up Melos
   run: |
     dart pub global activate melos
-    melos bootstrap   # for a pub workspace (Melos 7), `dart pub get` at the root also works
+    melos bootstrap   # for a pub workspace, `dart pub get` at the root instead
 
 - name: Test changed packages and their dependents
   uses: ProjectAJ14/flutter_diff_action@v2
