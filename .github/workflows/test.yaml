@@ -362,6 +362,10 @@ jobs:
         run: |
           cp -R action-src/example/super_app fixture
           cd fixture
+          # A test no change uses, so that picking the others is a partial run.
+          for package in app/super_app feature/auth feature/core; do
+            printf 'void main() {}\n' > "$package/test/other_test.dart"
+          done
           printf '.dart_tool/\nbuild/\ncoverage/\npubspec.lock\npubspec_overrides.yaml\n.flutter-plugins*\n' > .gitignore
           git init -b main
           git config user.name ci
